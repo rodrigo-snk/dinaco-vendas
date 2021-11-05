@@ -29,70 +29,53 @@ public class Parceiro {
 
     public static String tipoVencimento(Object codParc) throws MGEModelException {
         return getParceiroByPK(codParc).asString("AD_RVENC_MS");
-
     }
 
-    private static List<Integer> getKeys(Map<Integer, Boolean> map) {
+    protected static LinkedList<Object> getDias(Map<Object, Boolean> map) {
 
-        List<Integer> result = new LinkedList<>();
-            for (Map.Entry<Integer, Boolean> entry : map.entrySet()) {
-                if (Objects.equals(entry.getValue(), true)) {
-                    result.add(entry.getKey());
-                }
-                // we can't compare like this, null will throws exception
+        LinkedList<Object> result = new LinkedList<>();
+        for (Map.Entry<Object, Boolean> entry : map.entrySet()) {
+            if (Objects.equals(entry.getValue(), true)) {
+                result.add(entry.getKey());
+            }
+            // we can't compare like this, null will throws exception
               /*(if (entry.getValue().equals(value)) {
                   result.add(entry.getKey());
               }*/
-            }
-
-        return result;
-    }
-
-    private static List<Integer> getKeys(Map<DayOfWeek, Boolean> map, Boolean value) {
-
-        List<Integer> result = new LinkedList<>();
-        if (map.containsValue(value)) {
-            for (Map.Entry<DayOfWeek, Boolean> entry : map.entrySet()) {
-                if (Objects.equals(entry.getValue(), value)) {
-                    result.add(entry.getKey().getValue());
-                }
-                // we can't compare like this, null will throws exception
-              /*(if (entry.getValue().equals(value)) {
-                  result.add(entry.getKey());
-              }*/
-            }
         }
         return result;
     }
 
-    public static List<Integer>  diasSemana(Object codParc) throws MGEModelException {
-        Map<DayOfWeek, Boolean> mapDias = new HashMap<>();
+    public static LinkedList<Object> diasSemana(Object codParc) throws MGEModelException {
+        Map<Object, Boolean> mapDias = new HashMap<>();
+        DynamicVO parceiro = getParceiroByPK(codParc);
 
-        mapDias.put(DayOfWeek.MONDAY, getParceiroByPK(codParc).asString("AD_RVENC_SEG").equals("S"));
-        mapDias.put(DayOfWeek.TUESDAY, getParceiroByPK(codParc).asString("AD_RVENC_TER").equals("S"));
-        mapDias.put(DayOfWeek.WEDNESDAY, getParceiroByPK(codParc).asString("AD_RVENC_QUA").equals("S"));
-        mapDias.put(DayOfWeek.THURSDAY, getParceiroByPK(codParc).asString("AD_RVENC_QUI").equals("S"));
-        mapDias.put(DayOfWeek.FRIDAY, getParceiroByPK(codParc).asString("AD_RVENC_SEX").equals("S"));
-        mapDias.put(DayOfWeek.SATURDAY, getParceiroByPK(codParc).asString("AD_RVENC_SAB").equals("S"));
-        mapDias.put(DayOfWeek.SUNDAY, getParceiroByPK(codParc).asString("AD_RVENC_DOM").equals("S"));
+        mapDias.put(DayOfWeek.MONDAY.getValue(), parceiro.asString("AD_RVENC_SEG") != null && parceiro.asString("AD_RVENC_SEG").equals("S"));
+        mapDias.put(DayOfWeek.TUESDAY.getValue(), parceiro.asString("AD_RVENC_TER") != null && parceiro.asString("AD_RVENC_TER").equals("S"));
+        mapDias.put(DayOfWeek.WEDNESDAY.getValue(),parceiro.asString("AD_RVENC_QUA") != null && parceiro.asString("AD_RVENC_QUA").equals("S"));
+        mapDias.put(DayOfWeek.THURSDAY.getValue(), parceiro.asString("AD_RVENC_QUI") != null && parceiro.asString("AD_RVENC_QUI").equals("S"));
+        mapDias.put(DayOfWeek.FRIDAY.getValue(), parceiro.asString("AD_RVENC_SEX") != null && parceiro.asString("AD_RVENC_SEX").equals("S"));
+        mapDias.put(DayOfWeek.SATURDAY.getValue(), parceiro.asString("AD_RVENC_SAB") != null && parceiro.asString("AD_RVENC_SAB").equals("S"));
+        mapDias.put(DayOfWeek.SUNDAY.getValue(), parceiro.asString("AD_RVENC_DOM") != null && parceiro.asString("AD_RVENC_DOM").equals("S"));
 
-        return getKeys(mapDias, true);
+        return getDias(mapDias);
     }
 
-    public static List<Integer>  diasMes(Object codParc) throws MGEModelException {
-        Map<Integer, Boolean> mapDias = new HashMap<>();
+    public static LinkedList<Object> diasMes(Object codParc) throws MGEModelException {
+        Map<Object, Boolean> mapDias = new HashMap<>();
+        DynamicVO parceiro = getParceiroByPK(codParc);
 
-        mapDias.put(1, getParceiroByPK(codParc).asString("AD_RVENC_D1").equals("S"));
-        mapDias.put(2, getParceiroByPK(codParc).asString("AD_RVENC_D2").equals("S"));
-        mapDias.put(3, getParceiroByPK(codParc).asString("AD_RVENC_D3").equals("S"));
-        mapDias.put(4, getParceiroByPK(codParc).asString("AD_RVENC_D4").equals("S"));
-        mapDias.put(5, getParceiroByPK(codParc).asString("AD_RVENC_D5").equals("S"));
+        mapDias.put(1, parceiro.asString("AD_RVENC_D1").equals("S"));
+        mapDias.put(2, parceiro.asString("AD_RVENC_D2").equals("S"));
+        mapDias.put(3, parceiro.asString("AD_RVENC_D3").equals("S"));
+        mapDias.put(4, parceiro.asString("AD_RVENC_D4").equals("S"));
+        mapDias.put(5, parceiro.asString("AD_RVENC_D5").equals("S"));
 
         //Simular outros dias do mês
         for (int i = 6; i <= 31; i++) {
             mapDias.put(i, false);
         }
 
-        return getKeys(mapDias);
+        return getDias(mapDias);
     }
 }

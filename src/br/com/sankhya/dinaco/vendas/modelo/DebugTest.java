@@ -1,5 +1,6 @@
 package br.com.sankhya.dinaco.vendas.modelo;
 
+import javax.jws.Oneway;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
@@ -9,36 +10,32 @@ import java.util.*;
 
 public class DebugTest {
 
-    private static List<Integer> getDias(Map<Integer, Boolean> map) {
-
-        List<Integer> result = new LinkedList<>();
-            for (Map.Entry<Integer, Boolean> entry : map.entrySet()) {
-                if (Objects.equals(entry.getValue(), true)) {
-                    result.add(entry.getKey());
-                }
-                // we can't compare like this, null will throws exception
-              /*(if (entry.getValue().equals(value)) {
-                  result.add(entry.getKey());
-              }*/
-            }
-
-        return result;
-    }
-
     public static void main(String[] args) {
-        Map<Integer, Boolean> mapDias = new HashMap<>();
+        // Inicializacao objeto dias do mes
+        Map<Object, Boolean> mapDiasMes = new HashMap<>();
 
-        mapDias.put(1, true);
-        mapDias.put(2, false);
-        mapDias.put(3, true);
-        mapDias.put(4, false);
-        mapDias.put(5, true);
+        mapDiasMes.put(1, true);
+        mapDiasMes.put(2, false);
+        mapDiasMes.put(3, false);
+        mapDiasMes.put(4, false);
+        mapDiasMes.put(5, true);
 
         //Simular outros dias do mês
         for (int i = 6; i <= 31; i++) {
-            if (i != 26) mapDias.put(i, false);
-            else mapDias.put(i, true);
+            if (i != 26) mapDiasMes.put(i, false);
+            else mapDiasMes.put(i, true);
         }
+
+        // Inicializacao objeto dias da semana
+        Map<Object, Boolean> mapDiasSemana = new HashMap<>();
+
+        mapDiasSemana.put(DayOfWeek.MONDAY.getValue(), true);
+        mapDiasSemana.put(DayOfWeek.TUESDAY.getValue(), false);
+        mapDiasSemana.put(DayOfWeek.WEDNESDAY.getValue(), false);
+        mapDiasSemana.put(DayOfWeek.THURSDAY.getValue(), false);
+        mapDiasSemana.put(DayOfWeek.FRIDAY.getValue(), false);
+        mapDiasSemana.put(DayOfWeek.SATURDAY.getValue(), false);
+        mapDiasSemana.put(DayOfWeek.SUNDAY.getValue(), false);
 
         //SimpleDateFormat fmt = new SimpleDateFormat("dd");
         //System.out.println(fmt.format(Timestamp.valueOf(LocalDateTime.now())));
@@ -46,29 +43,64 @@ public class DebugTest {
         // increment days by 7
         LocalDate date = LocalDate.now();
         System.out.println("Current Date: " + date);
-        date = date.plusDays(7);
-        System.out.println("Date after Increment: " + date.withDayOfMonth(11));
+        //date = date.plusDays(7);
+        System.out.println("Date after increment: " + date.withDayOfMonth(11));
 
-        LocalDate data = LocalDate.parse("2021-10-26");
+        LocalDate data = LocalDate.parse("2021-11-09");
         System.out.println(data.getDayOfWeek());
         System.out.println(data.lengthOfMonth());
 
-        if(!mapDias.get(data.getDayOfMonth())) System.out.println("Parceiro não possui opção de pagamento neste dia!");
+
+        LinkedList<Object> diasMes = Parceiro.getDias(mapDiasMes);
+        LinkedList<Object> diasSemana =  Parceiro.getDias(mapDiasSemana);
+
+        System.out.println("Parceiro paga nos dias do mês " +diasMes);
+        System.out.println("Parceiro paga nos dias da semana " + diasSemana);
+        System.out.println(diasMes.contains(5));
 
 
-        List<Integer> setDias = getDias(mapDias);
-        System.out.println(setDias);
+        //int dia = 30;
+        LocalDate novoDtVenc = data;
+
+        int diaDoVencimento = novoDtVenc.getDayOfWeek().getValue();
+        int calculoDias = 0;
+
+        if (!diasSemana.contains(diaDoVencimento)) {
+            System.out.println("Parceiro NÃO pode pagar neste dia.");
+            for (Object dia : diasSemana) {
+                if (diaDoVencimento > (Integer) diasSemana.peekLast()) {
+                    calculoDias = 7 - diaDoVencimento + (Integer) diasSemana.peekFirst();
+                    break;
+                } else if (((Integer) dia) > diaDoVencimento) {
+                    calculoDias = 7 - diaDoVencimento + (Integer) diasSemana.get(diasSemana.indexOf(dia))-7;
+                    break;
+                }
+            }
+        } else System.out.println("Parceiro pode pagar neste dia.");
 
 
 
+        //int calculoDias = 7 - date.getDayOfWeek().getValue() + (int) diasSemana.get(diasSemana.indexOf(5));
+        System.out.println("Equation result: " +calculoDias);
 
-
-
+        System.out.println("Data de vencimento: "+ novoDtVenc);
+        System.out.println("Nova data de vencimento: "+ novoDtVenc.plusDays(calculoDias));
 
 
       /*  for (Map.Entry<Integer, Boolean> set :
-                mapDias.entrySet()) {
+                mapDiasSemaa.entrySet()) {
 
+
+        for (Integer dia: setDias) {
+            if ((dia > date.getDayOfMonth()) && (dia <= date.lengthOfMonth())) {
+                novoDtVenc = date.withDayOfMonth(dia);
+                break;
+            }
+
+        }
+
+        System.out.println("Data de vencimento original: " +date);
+        System.out.println("Data de vencimento atualizada: " +novoDtVenc);
             System.out.println(set.getKey() + " = "
                     + set.getValue());
 
