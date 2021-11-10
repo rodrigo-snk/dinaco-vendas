@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="dinaco-vendas">
+    <output-path>$PROJECT_DIR$/out/artifacts/dinaco_vendas</output-path>
+    <root id="archive" name="dinaco-vendas.jar">
+      <element id="module-output" name="dinaco-vendas" />
+    </root>
+  </artifact>
+</component>

@@ -54,7 +54,7 @@ BEGIN
             FROM TGFPAR PAR JOIN
             TGFCAB CAB ON CAB.CODPARC = PAR.CODPARC
             WHERE CAB.NUNOTA = EVP_GET_CAMPO_INT(P_IDSESSAO, 'NUNOTA');
-            EVP_SET_CAMPO_TXT(P_IDSESSAO, 'OBSERVACAO', OBSERVACAO);
+            --EVP_SET_CAMPO_TEXTO(P_IDSESSAO, 'OBSERVACAO', V_OBSERVACAO);
             -- Se tiver financeiro lançado, atualiza a Observacao no Financeiros
             SELECT COUNT(NUNOTA) INTO V_VALIDO
             FROM TGFFIN
@@ -76,6 +76,10 @@ BEGIN
      END IF;*/
 
      IF P_TIPOEVENTO = AFTER_UPDATE THEN
+        SELECT PAR.NOMEPARC, CAB.OBSERVACAO INTO V_NOMEPARC, V_OBSERVACAO
+        FROM TGFPAR PAR JOIN
+        TGFCAB CAB ON CAB.CODPARC = PAR.CODPARC
+        WHERE CAB.NUNOTA = EVP_GET_CAMPO_INT(P_IDSESSAO, 'NUNOTA');
            -- Verifica se há financeiro para essa NUNOTA, se houver atualiza campo Histórico
            SELECT COUNT(NUNOTA) INTO V_VALIDO
            FROM TGFFIN

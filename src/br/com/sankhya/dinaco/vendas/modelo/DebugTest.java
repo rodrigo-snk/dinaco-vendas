@@ -86,26 +86,13 @@ public class DebugTest {
         System.out.println("Data de vencimento: "+ novoDtVenc);
         System.out.println("Nova data de vencimento: "+ novoDtVenc.plusDays(calculoDias));
 
-
-      /*  for (Map.Entry<Integer, Boolean> set :
-                mapDiasSemaa.entrySet()) {
+        System.out.println("Nova data de vencimento proximo: "+ novoDtVenc.plusMonths(1).withDayOfMonth(5));
 
 
-        for (Integer dia: setDias) {
-            if ((dia > date.getDayOfMonth()) && (dia <= date.lengthOfMonth())) {
-                novoDtVenc = date.withDayOfMonth(dia);
-                break;
-            }
 
-        }
 
-        System.out.println("Data de vencimento original: " +date);
-        System.out.println("Data de vencimento atualizada: " +novoDtVenc);
-            System.out.println(set.getKey() + " = "
-                    + set.getValue());
 
-        }
-*/
+
 
     }
 }

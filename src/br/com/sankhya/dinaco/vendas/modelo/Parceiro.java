@@ -7,6 +7,7 @@ import br.com.sankhya.jape.wrapper.JapeWrapper;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.util.*;
 
@@ -31,6 +32,10 @@ public class Parceiro {
         return getParceiroByPK(codParc).asString("AD_RVENC_MS");
     }
 
+    public static String tipoRegra(Object codParc) throws MGEModelException {
+        return getParceiroByPK(codParc).asString("AD_RVENC_RECDESP");
+    }
+
     protected static LinkedList<Object> getDias(Map<Object, Boolean> map) {
 
         LinkedList<Object> result = new LinkedList<>();
@@ -43,6 +48,12 @@ public class Parceiro {
                   result.add(entry.getKey());
               }*/
         }
+        result.sort((d1, d2) -> {
+            Integer dia1 = (Integer) d1;
+            Integer dia2 = (Integer) d2;
+            return dia1.compareTo(dia2);
+        });
+
         return result;
     }
 
@@ -50,13 +61,13 @@ public class Parceiro {
         Map<Object, Boolean> mapDias = new HashMap<>();
         DynamicVO parceiro = getParceiroByPK(codParc);
 
-        mapDias.put(DayOfWeek.MONDAY.getValue(), parceiro.asString("AD_RVENC_SEG") != null && parceiro.asString("AD_RVENC_SEG").equals("S"));
-        mapDias.put(DayOfWeek.TUESDAY.getValue(), parceiro.asString("AD_RVENC_TER") != null && parceiro.asString("AD_RVENC_TER").equals("S"));
-        mapDias.put(DayOfWeek.WEDNESDAY.getValue(),parceiro.asString("AD_RVENC_QUA") != null && parceiro.asString("AD_RVENC_QUA").equals("S"));
-        mapDias.put(DayOfWeek.THURSDAY.getValue(), parceiro.asString("AD_RVENC_QUI") != null && parceiro.asString("AD_RVENC_QUI").equals("S"));
-        mapDias.put(DayOfWeek.FRIDAY.getValue(), parceiro.asString("AD_RVENC_SEX") != null && parceiro.asString("AD_RVENC_SEX").equals("S"));
-        mapDias.put(DayOfWeek.SATURDAY.getValue(), parceiro.asString("AD_RVENC_SAB") != null && parceiro.asString("AD_RVENC_SAB").equals("S"));
-        mapDias.put(DayOfWeek.SUNDAY.getValue(), parceiro.asString("AD_RVENC_DOM") != null && parceiro.asString("AD_RVENC_DOM").equals("S"));
+        mapDias.put(DayOfWeek.MONDAY.getValue(), parceiro.asString("AD_RVENC_SEG").equals("S"));
+        mapDias.put(DayOfWeek.TUESDAY.getValue(), parceiro.asString("AD_RVENC_TER").equals("S"));
+        mapDias.put(DayOfWeek.WEDNESDAY.getValue(),parceiro.asString("AD_RVENC_QUA").equals("S"));
+        mapDias.put(DayOfWeek.THURSDAY.getValue(), parceiro.asString("AD_RVENC_QUI").equals("S"));
+        mapDias.put(DayOfWeek.FRIDAY.getValue(), parceiro.asString("AD_RVENC_SEX").equals("S"));
+        mapDias.put(DayOfWeek.SATURDAY.getValue(), parceiro.asString("AD_RVENC_SAB").equals("S"));
+        mapDias.put(DayOfWeek.SUNDAY.getValue(), parceiro.asString("AD_RVENC_DOM").equals("S"));
 
         return getDias(mapDias);
     }
@@ -65,17 +76,14 @@ public class Parceiro {
         Map<Object, Boolean> mapDias = new HashMap<>();
         DynamicVO parceiro = getParceiroByPK(codParc);
 
-        mapDias.put(1, parceiro.asString("AD_RVENC_D1").equals("S"));
-        mapDias.put(2, parceiro.asString("AD_RVENC_D2").equals("S"));
-        mapDias.put(3, parceiro.asString("AD_RVENC_D3").equals("S"));
-        mapDias.put(4, parceiro.asString("AD_RVENC_D4").equals("S"));
-        mapDias.put(5, parceiro.asString("AD_RVENC_D5").equals("S"));
-
-        //Simular outros dias do mês
-        for (int i = 6; i <= 31; i++) {
-            mapDias.put(i, false);
+        for (int i = 1; i <= 31; i++) {
+            mapDias.put(i, parceiro.asString("AD_RVENC_D"+i).equalsIgnoreCase("S"));
         }
 
         return getDias(mapDias);
+    }
+
+    public static BigDecimal maisDias(Object codParc) throws MGEModelException {
+        return getParceiroByPK(codParc).asBigDecimalOrZero("AD_RVENC_DD");
     }
 }
