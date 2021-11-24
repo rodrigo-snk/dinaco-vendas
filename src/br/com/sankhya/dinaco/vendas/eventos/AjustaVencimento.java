@@ -67,7 +67,6 @@ public class AjustaVencimento implements EventoProgramavelJava {
                 case "P":
                     int dias = Parceiro.maisDias(codParc).intValue();
                     if ((dias != 0) && atualiza) {
-                        //atualizaVencimento(nuFin, dtVenc.plusMonths(1).withDayOfMonth(dias));
                         atualizaVencimento(nuFin, dtVenc.withDayOfMonth(dias).plusMonths(1));
                     }
                     break;

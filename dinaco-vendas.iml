@@ -7,6 +7,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="snk_libs" level="project" />
+    <orderEntry type="library" name="api_outros" level="project" />
+    <orderEntry type="library" name="api_sankhya" level="project" />
   </component>
 </module>

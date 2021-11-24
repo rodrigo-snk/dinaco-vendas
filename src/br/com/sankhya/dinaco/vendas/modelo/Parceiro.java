@@ -86,4 +86,8 @@ public class Parceiro {
     public static BigDecimal maisDias(Object codParc) throws MGEModelException {
         return getParceiroByPK(codParc).asBigDecimalOrZero("AD_RVENC_DD");
     }
+
+    public static BigDecimal getCodCenCus(Object codParc) throws MGEModelException {
+        return getParceiroByPK(codParc).asBigDecimalOrZero("AD_CODCENCUS");
+    }
 }

@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="api_sankhya">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/../../../../SDK/projetos base - importar workspace/api_sankhya" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/../../../../SDK/projetos base - importar workspace/api_sankhya" />
+    </SOURCES>
+    <jarDirectory url="file://$PROJECT_DIR$/../../../../SDK/projetos base - importar workspace/api_sankhya" recursive="false" />
+    <jarDirectory url="file://$PROJECT_DIR$/../../../../SDK/projetos base - importar workspace/api_sankhya" recursive="false" type="SOURCES" />
+  </library>
+</component>

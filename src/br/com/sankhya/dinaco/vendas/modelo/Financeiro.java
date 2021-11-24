@@ -8,15 +8,11 @@ import br.com.sankhya.jape.wrapper.JapeWrapper;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 
-import javax.ejb.Local;
 import java.math.BigDecimal;
-import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.concurrent.ExecutionException;
 
 public class Financeiro {
 
