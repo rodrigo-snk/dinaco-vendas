@@ -7,6 +7,7 @@ import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.mgecomercial.model.facades.helpper.ItemNotaHelpper;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.comercial.ComercialUtils;
+import br.com.sankhya.modelcore.comercial.centrais.CACHelperTest;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import com.sankhya.util.TimeUtils;
 
