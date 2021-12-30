@@ -3,18 +3,12 @@ package br.com.sankhya.dinaco.vendas.modelo;
 import br.com.sankhya.jape.EntityFacade;
 import br.com.sankhya.jape.dao.JdbcWrapper;
 import br.com.sankhya.jape.sql.NativeSql;
-import br.com.sankhya.modelcore.comercial.EstoqueHelpper;
-import br.com.sankhya.modelcore.comercial.centrais.CACHelper;
-import br.com.sankhya.modelcore.comercial.regras.EstoqueItem;
 import br.com.sankhya.modelcore.dwfdata.vo.EstoqueVO;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
-import org.mockito.internal.verification.Times;
 
-import javax.servlet.jsp.jstl.sql.Result;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
-import java.sql.Time;
 import java.sql.Timestamp;
 
 public class Estoque {
@@ -59,6 +53,7 @@ public class Estoque {
         if (rset.next()) {
             return rset.getTimestamp("DTVAL");
         }
+
 
         return null;
     }

@@ -16,8 +16,8 @@ public class RegraRedespacho implements Regra {
 
     @Override
     public void beforeUpdate(ContextoRegra contextoRegra) throws Exception {
-        //boolean isCabecalhoNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("CabecalhoNota");
-        boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
+        //final boolean isCabecalhoNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("CabecalhoNota");
+        final boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
 
         if (isConfirmandoNota) {
             DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();
@@ -28,8 +28,6 @@ public class RegraRedespacho implements Regra {
                 throw new MGEModelException("Campo redespacho é obrigatório.");
             }
         }
-
-
     }
 
     @Override

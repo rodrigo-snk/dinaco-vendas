@@ -92,4 +92,20 @@ public class CabecalhoNota {
             JapeSession.close(hnd);
         }
     }
+
+    public static void update(DynamicVO cabVO) throws MGEModelException {
+        JapeSession.SessionHandle hnd = null;
+        try {
+            hnd = JapeSession.open();
+            JapeFactory.dao(DynamicEntityNames.CABECALHO_NOTA)
+                    .prepareToUpdateByPK(cabVO.asBigDecimalOrZero("NUNOTA"))
+                    .set("CIF_FOB",cabVO.getProperty("CIF_FOB"))
+                    .set("AD_REDESPACHO", cabVO.getProperty("AD_REDESPACHO"))
+                    .update();
+        } catch (Exception e) {
+            MGEModelException.throwMe(e);
+        } finally {
+            JapeSession.close(hnd);
+        }
+    }
 }
