@@ -90,4 +90,8 @@ public class Parceiro {
     public static BigDecimal getCodCenCus(Object codParc) throws MGEModelException {
         return getParceiroByPK(codParc).asBigDecimalOrZero("AD_CODCENCUS");
     }
+
+    public static BigDecimal getCodNat(Object codParc) throws MGEModelException {
+        return getParceiroByPK(codParc).asBigDecimalOrZero("AD_CODNAT");
+    }
 }

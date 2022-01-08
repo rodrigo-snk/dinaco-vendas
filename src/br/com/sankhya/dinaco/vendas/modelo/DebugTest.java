@@ -1,8 +1,10 @@
 package br.com.sankhya.dinaco.vendas.modelo;
 
+import br.com.sankhya.ant.util.StringUtils;
 import com.sankhya.util.TimeUtils;
 
 import javax.jws.Oneway;
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
@@ -91,6 +93,11 @@ public class DebugTest {
         System.out.println("Nova data de vencimento proximo: "+ novoDtVenc.plusMonths(1).withDayOfMonth(5));
 
         System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getMonthEnd(TimeUtils.getNow()), TimeUtils.getNow()));
+
+        String observacao = null;
+
+
+        System.out.println();
 
 
 

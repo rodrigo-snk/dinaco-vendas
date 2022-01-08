@@ -53,12 +53,12 @@ public class ImpedeFaturamentoCotacao implements EventoProgramavelJava {
             // Nota de Origem
             DynamicVO cabOrigVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNotaOrig);
             final boolean ehCotacaoOrig = cabOrigVO.asBigDecimalOrZero("CODTIPOPER").compareTo(BigDecimal.valueOf(901)) == 0;
-            final boolean hasTerceirista = cabOrigVO.asBigDecimalOrZero("AD_CODPARCTERC").compareTo(BigDecimal.ZERO) != 0;
+            final boolean temTerceirista = cabOrigVO.asBigDecimalOrZero("AD_CODPARCTERC").compareTo(BigDecimal.ZERO) != 0;
 
             // Se for Pedido (TIPMOV = 'P') e não for 1030 - Pedido de Venda - Conta e Ordem e nem for 901 - Cotação de Venda
             // Impede o faturamento
-            if (ehCotacaoOrig && !ehContaEOrdem && hasTerceirista) {
-                throw new MGEModelException("Cotação tem terceirista. Somente é possível faturar para a TOP 1130 - Pedido de Venda - Compra e Ordem.");
+            if (ehCotacaoOrig && !ehContaEOrdem) {
+                throw new MGEModelException("Somente é possível faturar Cotação de Venda (901) para Pedido de Venda - Compra e Ordem (1130).");
             }
 
         } finally {

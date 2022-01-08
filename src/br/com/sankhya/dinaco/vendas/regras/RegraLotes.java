@@ -21,6 +21,8 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.Collection;
 
+import static br.com.sankhya.dinaco.vendas.modelo.Financeiro.liberacaoLimite;
+
 public class RegraLotes implements Regra {
     @Override
     public void beforeInsert(ContextoRegra contextoRegra) throws Exception {
@@ -73,7 +75,11 @@ public class RegraLotes implements Regra {
                 }
             }
 
-            if (!observacao.equals("")) liberacaoLimite(contextoRegra, codUsuarioLogado, notaVO, observacao);
+            if (!observacao.equals("")) {
+                liberacaoLimite(contextoRegra, codUsuarioLogado, notaVO, observacao, 1001);
+            } else {
+                LiberacaoAlcadaHelper.apagaSolicitacoEvento(1001, notaVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
+            }
 
         }
     }
@@ -141,30 +147,4 @@ public class RegraLotes implements Regra {
         }
     }
 
-    private void liberacaoLimite(ContextoRegra contextoRegra, BigDecimal codUsuarioLogado, DynamicVO notaVO, String observacao) throws Exception {
-        LiberacaoSolicitada ls = new LiberacaoSolicitada(notaVO.asBigDecimalOrZero("NUNOTA"),"TGFCAB", 1001, BigDecimal.ZERO);
-        ls.setCodCenCus(notaVO.asBigDecimalOrZero("CODCENCUS"));
-        ls.setSolicitante(codUsuarioLogado);
-        ls.setLiberador(BigDecimal.ZERO);
-        ls.setObsLiberador(observacao);
-        ls.setVlrAtual(notaVO.asBigDecimalOrZero("VLRNOTA"));
-        ls.setVlrTotal(notaVO.asBigDecimalOrZero("VLRNOTA"));
-        ls.setCodTipOper(notaVO.asBigDecimalOrZero("CODTIPOPER"));
-        ls.setVlrLimite(BigDecimal.ZERO);
-        ls.setDhSolicitacao(TimeUtils.getNow());
-
-        LiberacaoLimiteVO liberacaoLimiteVO = LiberacaoAlcadaHelper.carregaLiberacao(ls.getChave(), ls.getTabela(), ls.getEvento(), ls.getSequencia());
-        boolean semSolicitacao = liberacaoLimiteVO == null;
-
-        if (semSolicitacao) {
-            LiberacaoAlcadaHelper.validarLiberacoesPendentes(notaVO.asBigDecimalOrZero("NUNOTA"));
-            LiberacaoAlcadaHelper.processarLiberacao(ls);
-            contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
-        } else {
-            if (liberacaoLimiteVO.getDHLIB() == null) {
-                contextoRegra.getBarramentoRegra().getLiberacoesSolicitadas();
-                contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
-            }
-        }
-    }
 }

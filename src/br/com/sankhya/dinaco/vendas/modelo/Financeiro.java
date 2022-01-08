@@ -1,34 +1,64 @@
 package br.com.sankhya.dinaco.vendas.modelo;
 
+import br.com.sankhya.jape.EntityFacade;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.event.PersistenceEvent;
+import br.com.sankhya.jape.util.FinderWrapper;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.jape.wrapper.JapeFactory;
 import br.com.sankhya.jape.wrapper.JapeWrapper;
 import br.com.sankhya.modelcore.MGEModelException;
+import br.com.sankhya.modelcore.comercial.ContextoRegra;
+import br.com.sankhya.modelcore.comercial.LiberacaoAlcadaHelper;
+import br.com.sankhya.modelcore.comercial.LiberacaoSolicitada;
+import br.com.sankhya.modelcore.dwfdata.vo.tsi.LiberacaoLimiteVO;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
+import br.com.sankhya.modelcore.util.EntityFacadeFactory;
+import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collection;
 import java.util.LinkedList;
 
 public class Financeiro {
 
-    public static DynamicVO getFinanceiroByPK(Object codParc) throws MGEModelException {
+    public static DynamicVO getFinanceiroByPK(Object nuFin) throws MGEModelException {
         DynamicVO financeiroVO = null;
         JapeSession.SessionHandle hnd = null;
         try {
             hnd = JapeSession.open();
             JapeWrapper financeiroDAO = JapeFactory.dao(DynamicEntityNames.FINANCEIRO);
-            financeiroVO = financeiroDAO.findByPK(codParc);
+            financeiroVO = financeiroDAO.findByPK(nuFin);
         } catch (Exception e) {
             MGEModelException.throwMe(e);
         } finally {
             JapeSession.close(hnd);
         }
         return financeiroVO;
+    }
+
+    public static Collection<DynamicVO> getFinanceirosByNunota(BigDecimal nuNota) throws MGEModelException {
+
+        JapeSession.SessionHandle hnd = null;
+        Collection<DynamicVO> financeirosVO = null;
+        try {
+            hnd = JapeSession.open();
+            EntityFacade dwfFacade = EntityFacadeFactory.getDWFFacade();
+
+            FinderWrapper finder = new FinderWrapper(DynamicEntityNames.FINANCEIRO, "this.NUNOTA = ?", new Object[] { nuNota });
+            finder.setOrderBy("CODEMP");
+            finder.setMaxResults(-1);
+            financeirosVO = dwfFacade.findByDynamicFinderAsVO(finder);
+        } catch (Exception e) {
+            MGEModelException.throwMe(e);
+        } finally {
+            JapeSession.close(hnd);
+        }
+        return financeirosVO;
+
     }
 
    public static LocalDate calculaVencimento(LocalDate dtVenc, LinkedList<Object> diasSemana) throws MGEModelException {
@@ -119,5 +149,32 @@ public class Financeiro {
         }
 
 
+    }
+
+    public static void liberacaoLimite(ContextoRegra contextoRegra, BigDecimal codUsuarioLogado, DynamicVO notaVO, String observacao, int evento) throws Exception {
+        LiberacaoSolicitada ls = new LiberacaoSolicitada(notaVO.asBigDecimalOrZero("NUNOTA"),"TGFCAB", evento, BigDecimal.ZERO);
+        ls.setCodCenCus(notaVO.asBigDecimalOrZero("CODCENCUS"));
+        ls.setSolicitante(codUsuarioLogado);
+        ls.setLiberador(BigDecimal.ZERO);
+        ls.setObsLiberador(observacao);
+        ls.setVlrAtual(notaVO.asBigDecimalOrZero("VLRNOTA"));
+        ls.setVlrTotal(notaVO.asBigDecimalOrZero("VLRNOTA"));
+        ls.setCodTipOper(notaVO.asBigDecimalOrZero("CODTIPOPER"));
+        ls.setVlrLimite(BigDecimal.ZERO);
+        ls.setDhSolicitacao(TimeUtils.getNow());
+
+        LiberacaoLimiteVO liberacaoLimiteVO = LiberacaoAlcadaHelper.carregaLiberacao(ls.getChave(), ls.getTabela(), ls.getEvento(), ls.getSequencia());
+        boolean semSolicitacao = liberacaoLimiteVO == null;
+
+        if (semSolicitacao) {
+            LiberacaoAlcadaHelper.validarLiberacoesPendentes(notaVO.asBigDecimalOrZero("NUNOTA"));
+            LiberacaoAlcadaHelper.processarLiberacao(ls);
+            contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
+        } else {
+            if (liberacaoLimiteVO.getDHLIB() == null) {
+                contextoRegra.getBarramentoRegra().getLiberacoesSolicitadas();
+                contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
+            }
+        }
     }
 }

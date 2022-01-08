@@ -13,6 +13,8 @@ import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
 
+import static br.com.sankhya.dinaco.vendas.modelo.Financeiro.liberacaoLimite;
+
 public class RegraTipNeg implements Regra {
     @Override
     public void beforeInsert(ContextoRegra contextoRegra) throws Exception {
@@ -28,40 +30,43 @@ public class RegraTipNeg implements Regra {
 
         boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
         final boolean isCabecalhoNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("CabecalhoNota");
-        final boolean isModifyingCODTIPVENDA = contextoRegra.getPrePersistEntityState().getModifingFields().isModifing("CODTIPVENDA");
         final BigDecimal codUsuarioLogado = AuthenticationInfo.getCurrent().getUserID();
-        final boolean necessitaLiberacao = verificaSugestaoNegociacao(contextoRegra);
 
-        if (isConfirmandoNota && necessitaLiberacao) {
-            DynamicVO notaVO = contextoRegra.getPrePersistEntityState().getNewVO();
-            liberacaoLimite(contextoRegra, codUsuarioLogado, notaVO);
+        if (isConfirmandoNota) {
+
+            if (verificaSugestaoNegociacao(contextoRegra)) {
+                DynamicVO notaVO = contextoRegra.getPrePersistEntityState().getNewVO();
+                liberacaoLimite(contextoRegra, codUsuarioLogado, notaVO, "",1002);
+            }
+
         }
 
-        if (isCabecalhoNota && isModifyingCODTIPVENDA) {
-            verificaSugestaoNegociacao(contextoRegra);
+        if (isCabecalhoNota) {
+            final boolean isModifyingCODTIPVENDA = contextoRegra.getPrePersistEntityState().getModifingFields().isModifing("CODTIPVENDA");
+            if (isModifyingCODTIPVENDA) verificaSugestaoNegociacao(contextoRegra);
         }
 
     }
 
     @Override
-    public void beforeDelete(ContextoRegra contextoRegra) throws Exception {
+    public void beforeDelete(ContextoRegra contextoRegra) {
 
     }
 
     @Override
-    public void afterInsert(ContextoRegra contextoRegra) throws Exception {
+    public void afterInsert(ContextoRegra contextoRegra) {
 
     }
 
     @Override
-    public void afterUpdate(ContextoRegra contextoRegra) throws Exception {
+    public void afterUpdate(ContextoRegra contextoRegra) {
 
 
 
     }
 
     @Override
-    public void afterDelete(ContextoRegra contextoRegra) throws Exception {
+    public void afterDelete(ContextoRegra contextoRegra) {
 
     }
 
@@ -87,32 +92,6 @@ public class RegraTipNeg implements Regra {
             }
         }
         return false;
-    }
-
-    private void liberacaoLimite(ContextoRegra contextoRegra, BigDecimal codUsuarioLogado, DynamicVO notaVO) throws Exception {
-        LiberacaoSolicitada ls = new LiberacaoSolicitada(notaVO.asBigDecimalOrZero("NUNOTA"),"TGFCAB", 1002, BigDecimal.ZERO);
-        ls.setCodCenCus(notaVO.asBigDecimalOrZero("CODCENCUS"));
-        ls.setSolicitante(codUsuarioLogado);
-        ls.setLiberador(BigDecimal.ZERO);
-        ls.setVlrAtual(notaVO.asBigDecimalOrZero("VLRNOTA"));
-        ls.setVlrTotal(notaVO.asBigDecimalOrZero("VLRNOTA"));
-        ls.setCodTipOper(notaVO.asBigDecimalOrZero("CODTIPOPER"));
-        ls.setVlrLimite(BigDecimal.ZERO);
-        ls.setDhSolicitacao(TimeUtils.getNow());
-
-        LiberacaoLimiteVO liberacaoLimiteVO = LiberacaoAlcadaHelper.carregaLiberacao(ls.getChave(), ls.getTabela(), ls.getEvento(), ls.getSequencia());
-        boolean semSolicitacao = liberacaoLimiteVO == null;
-
-        if (semSolicitacao) {
-            LiberacaoAlcadaHelper.validarLiberacoesPendentes(notaVO.asBigDecimalOrZero("NUNOTA"));
-            LiberacaoAlcadaHelper.processarLiberacao(ls);
-            contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
-        } else {
-            if (liberacaoLimiteVO.getDHLIB() == null) {
-                contextoRegra.getBarramentoRegra().getLiberacoesSolicitadas();
-                contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
-            }
-        }
     }
 
 

@@ -33,11 +33,9 @@ public class RegraAvisosCab implements Regra {
 
         /*boolean isItemNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("ItemNota");
 
-
         EntityFacade dwf = getDWFFacade();
         JdbcWrapper jdbcWrapper = dwf.getJdbcWrapper();
         jdbcWrapper.openSession();
-
 
         if (isItemNota) {
             //USOPROD = '4' (Demonstração)
@@ -55,8 +53,6 @@ public class RegraAvisosCab implements Regra {
             }
             jdbcWrapper.closeSession();
         }*/
-
-
 
     }
 
