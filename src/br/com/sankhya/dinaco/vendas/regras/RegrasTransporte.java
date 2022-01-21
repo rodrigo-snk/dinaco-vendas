@@ -8,7 +8,7 @@ import br.com.sankhya.modelcore.comercial.ComercialUtils;
 import br.com.sankhya.modelcore.comercial.ContextoRegra;
 import br.com.sankhya.modelcore.comercial.Regra;
 import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
-import br.com.sankhya.modelcore.dwfdata.vo.tgf.TipoOperacaoVO;
+import com.sankhya.util.StringUtils;
 
 import java.math.BigDecimal;
 
@@ -25,7 +25,7 @@ public class RegrasTransporte implements Regra {
 
         if (isConfirmandoNota) {
             DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();
-            final boolean isRedespacho = cabVO.asString("AD_REDESPACHO").equalsIgnoreCase("S");
+            final boolean isRedespacho = cabVO.asString("AD_REDESPACHO").equalsIgnoreCase("S") || "4-5".contains(StringUtils.getNullAsEmpty(cabVO.asString("AD_FORMAENTREGA")));
             final boolean semRedespacho =  cabVO.asBigDecimalOrZero("CODPARCREDESPACHO").compareTo(BigDecimal.ZERO) == 0;
             final boolean semTransportadora =  cabVO.asBigDecimalOrZero("CODPARCTRANSP").compareTo(BigDecimal.ZERO) == 0;
             DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
@@ -33,7 +33,7 @@ public class RegrasTransporte implements Regra {
 
 
             if (isRedespacho && semRedespacho) {
-                throw new MGEModelException("Campo redespacho é obrigatório.");
+                throw new MGEModelException("Redespacho (Recebedor) é obrigatório.");
             }
 
             // Verifica se TOP obriga transportadora (AD_OBRIGATRANSP = 'S') e Parceiro Transportadora não preenchido

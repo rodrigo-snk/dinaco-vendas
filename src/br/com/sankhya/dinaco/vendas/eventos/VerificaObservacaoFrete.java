@@ -6,13 +6,11 @@ import br.com.sankhya.jape.event.TransactionContext;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.comercial.ComercialUtils;
-import br.com.sankhya.modelcore.comercial.LiberacaoAlcadaHelper;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
 
 import java.math.BigDecimal;
 
-import static br.com.sankhya.dinaco.vendas.modelo.Financeiro.liberacaoLimite;
 
 public class VerificaObservacaoFrete implements EventoProgramavelJava {
     @Override

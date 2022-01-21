@@ -36,6 +36,10 @@ public class Parceiro {
         return getParceiroByPK(codParc).asString("AD_RVENC_RECDESP");
     }
 
+    public static int diasVencimentoItem(Object codParc) throws MGEModelException {
+        return getParceiroByPK(codParc).asBigDecimalOrZero("AD_DIAS_VENC_ITEM").intValue();
+    }
+
     protected static LinkedList<Object> getDias(Map<Object, Boolean> map) {
 
         LinkedList<Object> result = new LinkedList<>();

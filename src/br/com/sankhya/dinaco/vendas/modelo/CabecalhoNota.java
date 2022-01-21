@@ -2,6 +2,8 @@ package br.com.sankhya.dinaco.vendas.modelo;
 
 import br.com.sankhya.jape.EntityFacade;
 import br.com.sankhya.jape.core.JapeSession;
+import br.com.sankhya.jape.dao.JdbcWrapper;
+import br.com.sankhya.jape.sql.NativeSql;
 import br.com.sankhya.jape.util.FinderWrapper;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.jape.wrapper.JapeFactory;
@@ -13,7 +15,9 @@ import com.sankhya.util.BigDecimalUtil;
 import com.sankhya.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Optional;
 
 public class CabecalhoNota {
 
@@ -36,7 +40,12 @@ public class CabecalhoNota {
         return notasVO;
     }
 
-    public static DynamicVO buscaNotaPelaPK(BigDecimal nuNota) throws MGEModelException {
+    public static boolean ehPedidoOuVenda(String tipMov) {
+        return "P-V".contains(tipMov);
+    }
+
+
+    public static DynamicVO buscaNotaPelaPK(BigDecimal nuNota) {
         JapeSession.SessionHandle hnd = null;
         DynamicVO notaVO = null;
         try {
@@ -44,14 +53,14 @@ public class CabecalhoNota {
             EntityFacade dwfFacade = EntityFacadeFactory.getDWFFacade();
             notaVO = (DynamicVO) dwfFacade.findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNota);
         } catch (Exception e) {
-            MGEModelException.throwMe(e);
+            e.printStackTrace();
         } finally {
             JapeSession.close(hnd);
         }
         return notaVO;
     }
 
-    public static BigDecimal ultimoPrecoVendaNFe(BigDecimal codProd) throws MGEModelException {
+    /*public static BigDecimal ultimoPrecoVendaNFe(BigDecimal codProd) throws MGEModelException {
 
         JapeSession.SessionHandle hnd = null;
         Collection<DynamicVO> itensVO = null;
@@ -77,6 +86,36 @@ public class CabecalhoNota {
             }
         }
         return BigDecimal.ZERO;
+    }*/
+
+    public static BigDecimal ultimoPrecoVendaNFe(BigDecimal codProd, BigDecimal codParc) throws MGEModelException {
+
+        JapeSession.SessionHandle hnd = null;
+        Optional<DynamicVO> item = Optional.empty();
+        try {
+            hnd = JapeSession.open();
+            JdbcWrapper jdbc =  EntityFacadeFactory.getDWFFacade().getJdbcWrapper();
+            NativeSql sql = new NativeSql(jdbc);
+
+            sql.appendSql(" SELECT ITE.*, CAB.CODPARC");
+            sql.appendSql(" FROM TGFITE ITE ");
+            sql.appendSql(" JOIN TGFCAB CAB ON CAB.NUNOTA = ITE.NUNOTA ");
+            sql.appendSql(" WHERE ITE.CODPROD = :CODPROD ");
+            sql.appendSql(" AND CAB.CODPARC = :CODPARC ");
+            sql.appendSql(" ORDER BY CAB.NUNOTA DESC ");
+
+            sql.setNamedParameter("CODPROD", codProd);
+            sql.setNamedParameter("CODPARC", codParc);
+
+            item = sql.asVOCollection(DynamicEntityNames.ITEM_NOTA).stream()
+                    .filter(vo -> ComercialUtils.ehNFEAprovada(buscaNotaPelaPK(vo.asBigDecimalOrZero("NUNOTA"))) && ComercialUtils.ehVenda(buscaNotaPelaPK(vo.asBigDecimalOrZero("NUNOTA")).asString("TIPMOV")))
+                    .findFirst();
+        } catch (Exception e) {
+            MGEModelException.throwMe(e);
+        } finally {
+            JapeSession.close(hnd);
+        }
+        return item.isPresent() ? item.get().asBigDecimalOrZero("VLRUNIT") : BigDecimal.ZERO;
     }
 
     public static void updateCodCenCus(DynamicVO cabVO) throws MGEModelException {
@@ -161,7 +200,7 @@ public class CabecalhoNota {
     public static void verificaTransportadoraObrigatoria(DynamicVO cabVO) throws Exception {
         String cifFob = cabVO.asString("CIF_FOB");
         BigDecimal codParcTransp = cabVO.asBigDecimalOrZero("CODPARCTRANSP");
-        final boolean naoPrecisaTransportadora = cifFob.equalsIgnoreCase("S") || cifFob.equalsIgnoreCase("F");
+        final boolean naoPrecisaTransportadora = "S".equalsIgnoreCase(cifFob) || "F".equalsIgnoreCase(cifFob);
 
         if (!naoPrecisaTransportadora && BigDecimalUtil.isNullOrZero(codParcTransp)){
             //throw new MGEModelException("Transportadora obrigatória, Forma Entrega: " +cabVO.asString("AD_FORMAENTREGA")+ ", CIF/FOB: " +cabVO.asString("CIF_FOB")+ ", Transportadora: " +codParcTransp);

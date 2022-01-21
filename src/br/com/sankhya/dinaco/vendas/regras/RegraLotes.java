@@ -1,6 +1,7 @@
 package br.com.sankhya.dinaco.vendas.regras;
 
 import br.com.sankhya.dinaco.vendas.modelo.Estoque;
+import br.com.sankhya.dinaco.vendas.modelo.Parceiro;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.util.FinderWrapper;
 import br.com.sankhya.jape.vo.DynamicVO;
@@ -14,6 +15,8 @@ import br.com.sankhya.modelcore.dwfdata.vo.ItemNotaVO;
 import br.com.sankhya.modelcore.dwfdata.vo.tsi.LiberacaoLimiteVO;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
+import br.com.sankhya.util.troubleshooting.SKError;
+import br.com.sankhya.util.troubleshooting.TSLevel;
 import com.sankhya.util.StringUtils;
 import com.sankhya.util.TimeUtils;
 
@@ -29,10 +32,13 @@ public class RegraLotes implements Regra {
         final boolean isItemNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("ItemNota");
 
         if (isItemNota) {
+
             verificaLote(contextoRegra);
+            verificaValidade(contextoRegra);
         }
 
     }
+
 
     @Override
     public void beforeUpdate(ContextoRegra contextoRegra) throws Exception {
@@ -114,6 +120,7 @@ public class RegraLotes implements Regra {
         final BigDecimal nuNota = itemVO.asBigDecimalOrZero("NUNOTA");
         DynamicVO notaVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNota);
         DynamicVO topVO = TipoOperacaoUtils.getTopVO(notaVO.asBigDecimalOrZero("CODTIPOPER"));
+        final boolean topVerificaFEFO = "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_FEFO")));
         DynamicVO produtoVO = (DynamicVO)EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.PRODUTO, itemVO.asBigDecimalOrZero("CODPROD"));
 
         String controle = getControle(itemVO.asString("CONTROLE"));
@@ -121,12 +128,12 @@ public class RegraLotes implements Regra {
         BigDecimal codProd = itemVO.asBigDecimalOrZero("CODPROD");
         BigDecimal codLocal = itemVO.asBigDecimalOrZero("CODLOCALORIG");
         boolean quebraFEFO = StringUtils.getNullAsEmpty(itemVO.getProperty("AD_QUEBRAFEFO")).equalsIgnoreCase("S");
-        DynamicVO localVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.LOCAL_FINANCEIRO, codLocal);
+        //DynamicVO localVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.LOCAL_FINANCEIRO, codLocal);
         Timestamp validadeLote;
         Timestamp menorValidade;
 
         // Se TOP e Local estiverem marcados na regra
-        if (StringUtils.getNullAsEmpty(topVO.getProperty("AD_FEFO")).equals("S") && !quebraFEFO/*  && codLocal &&  */) {
+        if (topVerificaFEFO && !quebraFEFO /*  && codLocal &&  */) {
 
             if (!controle.equals(" ")) {
                 //throw new MGEModelException(String.valueOf(Estoque.getValidade(codProd,codEmp, codLocal,controle)));
@@ -143,6 +150,27 @@ public class RegraLotes implements Regra {
                 //contextoRegra.getBarramentoRegra().addMensagem("Local Estoque: " + localVO.getProperty("DESCRLOCAL"));
                 //EstoqueVO estoqueVO = (EstoqueVO) EntityFacadeFactory.getDWFFacade().getDefaultValueObjectInstance(DynamicEntityNames.ESTOQUE, EstoqueVO.class);
             }
+
+        }
+    }
+
+    private void verificaValidade(ContextoRegra contextoRegra) throws Exception {
+        DynamicVO itemVO = contextoRegra.getPrePersistEntityState().getNewVO();
+        DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, itemVO.asBigDecimalOrZero("NUNOTA"));
+        DynamicVO parceiroVO = Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC"));
+        final int DIASVENCITEM = Parceiro.diasVencimentoItem(parceiroVO.asBigDecimalOrZero("CODPARC"));
+
+        String controle = getControle(itemVO.asString("CONTROLE"));
+        BigDecimal codEmp = itemVO.asBigDecimalOrZero("CODEMP");
+        BigDecimal codProd = itemVO.asBigDecimalOrZero("CODPROD");
+        BigDecimal codLocal = itemVO.asBigDecimalOrZero("CODLOCALORIG");
+
+        Timestamp validadeLote = Estoque.getValidade(codProd,codEmp, codLocal,controle);
+        Timestamp dataLimiteQueClienteAceitaVencimento = TimeUtils.dataAdd(TimeUtils.getNow(), DIASVENCITEM, 5);
+
+        if (validadeLote != null && TimeUtils.compareOnlyDates(validadeLote, dataLimiteQueClienteAceitaVencimento) < 0) {
+            //contextoRegra.getBarramentoRegra().addMensagem("Parceiro não aceita produtos com validade menor que " + DIASVENCITEM + " dias.");
+            throw new MGEModelException("Parceiro " +parceiroVO.asString("NOMEPARC")+" não aceita produtos com validade menor que " + DIASVENCITEM + " dias.");
 
         }
     }

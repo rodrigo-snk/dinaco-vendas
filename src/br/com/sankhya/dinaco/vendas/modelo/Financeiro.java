@@ -151,30 +151,36 @@ public class Financeiro {
 
     }
 
-    public static void liberacaoLimite(ContextoRegra contextoRegra, BigDecimal codUsuarioLogado, DynamicVO notaVO, String observacao, int evento) throws Exception {
-        LiberacaoSolicitada ls = new LiberacaoSolicitada(notaVO.asBigDecimalOrZero("NUNOTA"),"TGFCAB", evento, BigDecimal.ZERO);
-        ls.setCodCenCus(notaVO.asBigDecimalOrZero("CODCENCUS"));
-        ls.setSolicitante(codUsuarioLogado);
-        ls.setLiberador(BigDecimal.ZERO);
-        ls.setObsLiberador(observacao);
-        ls.setVlrAtual(notaVO.asBigDecimalOrZero("VLRNOTA"));
-        ls.setVlrTotal(notaVO.asBigDecimalOrZero("VLRNOTA"));
-        ls.setCodTipOper(notaVO.asBigDecimalOrZero("CODTIPOPER"));
-        ls.setVlrLimite(BigDecimal.ZERO);
-        ls.setDhSolicitacao(TimeUtils.getNow());
+    public static void liberacaoLimite(ContextoRegra contextoRegra, BigDecimal codUsuarioLogado, DynamicVO notaVO, String observacao, int evento) {
+        try {
+            LiberacaoSolicitada ls = new LiberacaoSolicitada(notaVO.asBigDecimalOrZero("NUNOTA"),"TGFCAB", evento, BigDecimal.ZERO);
+            ls.setCodCenCus(notaVO.asBigDecimalOrZero("CODCENCUS"));
+            ls.setSolicitante(codUsuarioLogado);
+            ls.setLiberador(BigDecimal.ZERO);
+            ls.setObsLiberador(observacao);
+            ls.setVlrAtual(notaVO.asBigDecimalOrZero("VLRNOTA"));
+            ls.setVlrTotal(notaVO.asBigDecimalOrZero("VLRNOTA"));
+            ls.setCodTipOper(notaVO.asBigDecimalOrZero("CODTIPOPER"));
+            ls.setVlrLimite(BigDecimal.ZERO);
+            ls.setDhSolicitacao(TimeUtils.getNow());
 
-        LiberacaoLimiteVO liberacaoLimiteVO = LiberacaoAlcadaHelper.carregaLiberacao(ls.getChave(), ls.getTabela(), ls.getEvento(), ls.getSequencia());
-        boolean semSolicitacao = liberacaoLimiteVO == null;
+            LiberacaoLimiteVO liberacaoLimiteVO = LiberacaoAlcadaHelper.carregaLiberacao(ls.getChave(), ls.getTabela(), ls.getEvento(), ls.getSequencia());
+            boolean semSolicitacao = liberacaoLimiteVO == null;
 
-        if (semSolicitacao) {
-            LiberacaoAlcadaHelper.validarLiberacoesPendentes(notaVO.asBigDecimalOrZero("NUNOTA"));
-            LiberacaoAlcadaHelper.processarLiberacao(ls);
-            contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
-        } else {
-            if (liberacaoLimiteVO.getDHLIB() == null) {
-                contextoRegra.getBarramentoRegra().getLiberacoesSolicitadas();
+            if (semSolicitacao) {
+                LiberacaoAlcadaHelper.validarLiberacoesPendentes(notaVO.asBigDecimalOrZero("NUNOTA"));
+                LiberacaoAlcadaHelper.processarLiberacao(ls);
                 contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
+            } else {
+                if (liberacaoLimiteVO.getDHLIB() == null) {
+                    contextoRegra.getBarramentoRegra().getLiberacoesSolicitadas();
+                    contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
+                }
             }
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
     }
 }

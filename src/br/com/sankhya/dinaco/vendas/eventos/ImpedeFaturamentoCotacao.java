@@ -34,10 +34,9 @@ public class ImpedeFaturamentoCotacao implements EventoProgramavelJava {
     @Override
     public void afterInsert(PersistenceEvent persistenceEvent) throws Exception {
 
-        JapeSession.SessionHandle hnd = null;
         JdbcWrapper jdbc = null;
         try {
-            hnd = JapeSession.open();
+            JapeSession.open();
             jdbc = EntityFacadeFactory.getDWFFacade().getJdbcWrapper();
             jdbc.openSession();
 
@@ -47,18 +46,20 @@ public class ImpedeFaturamentoCotacao implements EventoProgramavelJava {
 
             //Nota destino
             DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNota);
-            final boolean ehPedido = cabVO.asString("TIPMOV").equalsIgnoreCase("P");
-            final boolean ehContaEOrdem = cabVO.asBigDecimalOrZero("CODTIPOPER").compareTo(BigDecimal.valueOf(1130)) == 0;
+            //final boolean ehPedido = cabVO.asString("TIPMOV").equalsIgnoreCase("P");
+            final boolean ehContaEOrdem = cabVO.asBigDecimalOrZero("CODTIPOPER").compareTo(BigDecimal.valueOf(1030)) == 0; // 1030 - Pedido de Venda - Conta e Ordem
 
             // Nota de Origem
             DynamicVO cabOrigVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNotaOrig);
-            final boolean ehCotacaoOrig = cabOrigVO.asBigDecimalOrZero("CODTIPOPER").compareTo(BigDecimal.valueOf(901)) == 0;
+            final boolean ehCotacaoOrig = cabOrigVO.asBigDecimalOrZero("CODTIPOPER").compareTo(BigDecimal.valueOf(901)) == 0; // 901 - Cotação de Venda
             final boolean temTerceirista = cabOrigVO.asBigDecimalOrZero("AD_CODPARCTERC").compareTo(BigDecimal.ZERO) != 0;
 
-            // Se for Pedido (TIPMOV = 'P') e não for 1030 - Pedido de Venda - Conta e Ordem e nem for 901 - Cotação de Venda
+            // Se TOP de faturamento não for 1030 - Pedido de Venda - Conta e Ordem, TOP origem for 901 - Cotação de Venda e Terceirista estiver preenchido
             // Impede o faturamento
-            if (ehCotacaoOrig && !ehContaEOrdem) {
-                throw new MGEModelException("Somente é possível faturar Cotação de Venda (901) para Pedido de Venda - Compra e Ordem (1130).");
+            if (ehCotacaoOrig && !ehContaEOrdem && temTerceirista) {
+                throw new MGEModelException("Somente é possível faturar Cotação de Venda (901) com terceirista para Pedido de Venda - Compra e Ordem (1030).");
+            } else if (ehCotacaoOrig && ehContaEOrdem && !temTerceirista) {
+                throw new MGEModelException("Somente é possível faturar Cotação de Venda (901) para Pedido de Venda - Compra e Ordem (1030) com terceirista preenchido.");
             }
 
         } finally {

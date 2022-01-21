@@ -1,10 +1,14 @@
 package br.com.sankhya.dinaco.vendas.modelo;
 
-import br.com.sankhya.ant.util.StringUtils;
+import br.com.sankhya.jape.util.FinderWrapper;
+import br.com.sankhya.modelcore.util.DynamicEntityNames;
+import com.sankhya.util.StringUtils;
 import com.sankhya.util.TimeUtils;
+import com.sencha.gxt.fx.client.animation.SlideOut;
 
 import javax.jws.Oneway;
 import java.math.BigDecimal;
+import java.sql.Time;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
@@ -94,10 +98,30 @@ public class DebugTest {
 
         System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getMonthEnd(TimeUtils.getNow()), TimeUtils.getNow()));
 
-        String observacao = null;
+        final int AD_DIAS_VENC_ITEM = 40;
+
+        Timestamp dtVencItem = TimeUtils.buildTimestamp("01/03/2022");
+
+        System.out.println(dtVencItem);
+
+        System.out.println(TimeUtils.dataAdd(TimeUtils.getNow(), AD_DIAS_VENC_ITEM, 5));
+
+       // System.out.println(TimeUtils.getFinalPeriodo(TimeUtils.getNow(), AD_DIAS_VENC_ITEM));
+        System.out.println(TimeUtils.getTimeOrZero(null));
+        System.out.println(TimeUtils.getValueOrNow(null));
+        // Se o vencimento do item for menor q
+        System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getTimeOrZero(null), TimeUtils.dataAdd(TimeUtils.getNow(), AD_DIAS_VENC_ITEM, 5)));
 
 
-        System.out.println();
+        System.out.println("4-5".contains(StringUtils.getNullAsEmpty(null)));
+
+
+        System.out.println(!StringUtils.getNullAsEmpty("8").isEmpty());
+
+
+
+
+
 
 
 

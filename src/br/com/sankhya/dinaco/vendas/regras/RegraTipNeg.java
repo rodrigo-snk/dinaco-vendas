@@ -1,5 +1,6 @@
 package br.com.sankhya.dinaco.vendas.regras;
 
+import br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.modelcore.auth.AuthenticationInfo;
@@ -73,7 +74,7 @@ public class RegraTipNeg implements Regra {
     private boolean verificaSugestaoNegociacao(ContextoRegra contextoRegra) throws Exception {
         BigDecimal codTipVenda = contextoRegra.getPrePersistEntityState().getNewVO().asBigDecimal("CODTIPVENDA");
         DynamicVO topVO = TipoOperacaoUtils.getTopVO(contextoRegra.getPrePersistEntityState().getNewVO().asBigDecimalOrZero("CODTIPOPER"));
-        boolean ehVenda = ComercialUtils.ehVenda(topVO.asString("TIPMOV"));
+        boolean ehVenda = CabecalhoNota.ehPedidoOuVenda(topVO.asString("TIPMOV"));
         boolean ehCompra = ComercialUtils.ehCompra(topVO.asString("TIPMOV"));
 
         DynamicVO complementoParcVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.COMPLEMENTO_PARCEIRO, contextoRegra.getPrePersistEntityState().getNewVO().asBigDecimal("CODPARC"));
