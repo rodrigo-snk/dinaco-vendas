@@ -1,10 +1,15 @@
 package br.com.sankhya.dinaco.vendas.modelo;
 
 import br.com.sankhya.jape.util.FinderWrapper;
+import br.com.sankhya.jape.vo.DynamicVO;
+import br.com.sankhya.jape.vo.EntityVO;
+import br.com.sankhya.modelcore.dwfdata.vo.CabecalhoNotaVO;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
+import com.sankhya.util.BigDecimalUtil;
 import com.sankhya.util.StringUtils;
 import com.sankhya.util.TimeUtils;
 import com.sencha.gxt.fx.client.animation.SlideOut;
+import org.junit.Test;
 
 import javax.jws.Oneway;
 import java.math.BigDecimal;
@@ -16,7 +21,28 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import static org.junit.Assert.assertEquals;
+
 public class DebugTest {
+
+    @Test
+    public void blablablabla() {
+
+        assertEquals(new BigDecimal(1030.00), BigDecimal.ZERO);
+
+    }
+    @Test
+    public void setDataLimiteQueClienteAceitaVencimento() {
+
+        Timestamp dataLimiteQueClienteAceitaVencimento = TimeUtils.dataAdd(TimeUtils.getNow(), 0, 5);
+
+        assertEquals(dataLimiteQueClienteAceitaVencimento, TimeUtils.getNow());
+
+
+    }
+
+
+
 
     public static void main(String[] args) {
         // Inicializacao objeto dias do mes
@@ -98,7 +124,7 @@ public class DebugTest {
 
         System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getMonthEnd(TimeUtils.getNow()), TimeUtils.getNow()));
 
-        final int AD_DIAS_VENC_ITEM = 40;
+        final int AD_DIAS_VENC_ITEM = 0;
 
         Timestamp dtVencItem = TimeUtils.buildTimestamp("01/03/2022");
 
@@ -116,7 +142,31 @@ public class DebugTest {
         System.out.println("4-5".contains(StringUtils.getNullAsEmpty(null)));
 
 
-        System.out.println(!StringUtils.getNullAsEmpty("8").isEmpty());
+        System.out.println(StringUtils.getNullAsEmpty("8").isEmpty());
+        System.out.println(StringUtils.getNullAsEmpty(null).isEmpty());
+
+        Set<String> especies = new HashSet<String>();
+
+        especies.add(null);
+        especies.add(null);
+
+        especies.add("Teste Especie");
+        System.out.println(especies.size());
+
+        especies.forEach(System.out::println);
+
+        //System.out.println(especies.stream().findFirst().get());
+
+        //System.out.println(BigDecimal.valueOf(3010005).compareTo(BigDecimal.valueOf(3010008)) != 0);
+        //System.out.println(TimeUtils.compareOnlyDates(null, TimeUtils.getNow()));
+        //System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getNow(),null));
+
+
+
+
+
+
+
 
 
 

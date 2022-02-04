@@ -4,13 +4,12 @@ import br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.modelcore.MGEModelException;
-import br.com.sankhya.modelcore.comercial.ComercialUtils;
 import br.com.sankhya.modelcore.comercial.ContextoRegra;
 import br.com.sankhya.modelcore.comercial.Regra;
 import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
+import com.sankhya.util.BigDecimalUtil;
 import com.sankhya.util.StringUtils;
 
-import java.math.BigDecimal;
 
 public class RegrasTransporte implements Regra {
     @Override
@@ -25,11 +24,11 @@ public class RegrasTransporte implements Regra {
 
         if (isConfirmandoNota) {
             DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();
-            final boolean isRedespacho = cabVO.asString("AD_REDESPACHO").equalsIgnoreCase("S") || "4-5".contains(StringUtils.getNullAsEmpty(cabVO.asString("AD_FORMAENTREGA")));
-            final boolean semRedespacho =  cabVO.asBigDecimalOrZero("CODPARCREDESPACHO").compareTo(BigDecimal.ZERO) == 0;
-            final boolean semTransportadora =  cabVO.asBigDecimalOrZero("CODPARCTRANSP").compareTo(BigDecimal.ZERO) == 0;
+            final boolean isRedespacho = "S".equalsIgnoreCase(StringUtils.getNullAsEmpty(cabVO.asString("AD_REDESPACHO"))) || "4".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_FORMAENTREGA"))) || "5".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_FORMAENTREGA")));
+            final boolean semRedespacho =  BigDecimalUtil.isNullOrZero(cabVO.asBigDecimalOrZero("CODPARCREDESPACHO"));
+            final boolean semTransportadora =  BigDecimalUtil.isNullOrZero(cabVO.asBigDecimalOrZero("CODPARCTRANSP"));
             DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
-            final boolean obrigaTransportadora = topVO.asString("AD_OBRIGATRANSP").equalsIgnoreCase("S");
+            final boolean obrigaTransportadora = "S".equalsIgnoreCase(StringUtils.getNullAsEmpty(topVO.asString("AD_OBRIGATRANSP")));
 
 
             if (isRedespacho && semRedespacho) {
@@ -40,6 +39,7 @@ public class RegrasTransporte implements Regra {
             if (obrigaTransportadora && semTransportadora) {
                 CabecalhoNota.verificaTransportadoraObrigatoria(cabVO);
             }
+
         }
     }
 

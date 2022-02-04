@@ -9,13 +9,13 @@ import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.jape.wrapper.JapeFactory;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.comercial.ComercialUtils;
+import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
 import com.sankhya.util.BigDecimalUtil;
 import com.sankhya.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -133,6 +133,21 @@ public class CabecalhoNota {
         }
     }
 
+    public static void updateEspecie(DynamicVO cabVO) throws MGEModelException {
+        JapeSession.SessionHandle hnd = null;
+        try {
+            hnd = JapeSession.open();
+            JapeFactory.dao(DynamicEntityNames.CABECALHO_NOTA)
+                    .prepareToUpdateByPK(cabVO.asBigDecimalOrZero("NUNOTA"))
+                    .set("VOLUME",cabVO.getProperty("VOLUME"))
+                    .update();
+        } catch (Exception e) {
+            MGEModelException.throwMe(e);
+        } finally {
+            JapeSession.close(hnd);
+        }
+    }
+
     public static void updateCodNat(DynamicVO cabVO) throws MGEModelException {
         JapeSession.SessionHandle hnd = null;
         try {
@@ -166,7 +181,7 @@ public class CabecalhoNota {
 
     public static void verificaFormaEntrega(DynamicVO notaVO) throws Exception {
 
-        String formaEntrega = StringUtils.getNullAsEmpty(notaVO.asString("AD_FORMAENTREGA"));
+        final String formaEntrega = StringUtils.getNullAsEmpty(notaVO.asString("AD_FORMAENTREGA"));
 
         switch (formaEntrega) {
             //CIF 2-4-5-6-7
@@ -198,13 +213,18 @@ public class CabecalhoNota {
      *  Verifica se frete diferente de FOB ou Sem Frete e se Parceiro Transportadora não está preenchido
      */
     public static void verificaTransportadoraObrigatoria(DynamicVO cabVO) throws Exception {
-        String cifFob = cabVO.asString("CIF_FOB");
-        BigDecimal codParcTransp = cabVO.asBigDecimalOrZero("CODPARCTRANSP");
+        final String cifFob = StringUtils.getNullAsEmpty(cabVO.asString("CIF_FOB"));
+        final BigDecimal codParcTransp = cabVO.asBigDecimalOrZero("CODPARCTRANSP");
         final boolean naoPrecisaTransportadora = "S".equalsIgnoreCase(cifFob) || "F".equalsIgnoreCase(cifFob);
 
         if (!naoPrecisaTransportadora && BigDecimalUtil.isNullOrZero(codParcTransp)){
             //throw new MGEModelException("Transportadora obrigatória, Forma Entrega: " +cabVO.asString("AD_FORMAENTREGA")+ ", CIF/FOB: " +cabVO.asString("CIF_FOB")+ ", Transportadora: " +codParcTransp);
             throw new MGEModelException("Transportadora obrigatória para a forma de entrega selecionada. Verifique na aba Transporte.");
         }
+    }
+    public static boolean exigeOC(DynamicVO cabVO) throws Exception {
+        return StringUtils.getNullAsEmpty(Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC")).asString("AD_EXIGEOC")).equalsIgnoreCase("S")
+                && StringUtils.getNullAsEmpty(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_EXIGEOC")).equalsIgnoreCase("S");
+
     }
 }

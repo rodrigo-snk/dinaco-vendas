@@ -68,7 +68,7 @@ public class RegraAvisosCab implements Regra {
     @Override
     public void afterInsert(ContextoRegra contextoRegra) throws Exception {
 
-        boolean isCabecalhoNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("CabecalhoNota");
+        final boolean isCabecalhoNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("CabecalhoNota");
 
         if (isCabecalhoNota) {
             DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();

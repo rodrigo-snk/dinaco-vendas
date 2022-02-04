@@ -6,6 +6,7 @@ import br.com.sankhya.jape.sql.NativeSql;
 import br.com.sankhya.modelcore.dwfdata.vo.EstoqueVO;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
+import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
@@ -13,7 +14,7 @@ import java.sql.Timestamp;
 
 public class Estoque {
 
-    public static Timestamp getValidadeMinima(BigDecimal codProd, BigDecimal codEmp) throws Exception {
+    public static Timestamp getMenorValidade(BigDecimal codProd, BigDecimal codEmp) throws Exception {
         EntityFacade dwfFacade = null;
         JdbcWrapper jdbc = null;
 
@@ -25,7 +26,7 @@ public class Estoque {
         //sql.setNamedParameter("CODLOCAL", codLocal.toString());
         //sql.setNamedParameter("CONTROLE", controle);
 
-        ResultSet rset = sql.executeQuery("SELECT MIN(DTVAL) DTVAL FROM TGFEST WHERE ATIVO = 'S' AND TIPO = 'P' AND CODPROD = :CODPROD  AND CODEMP = :CODEMP");
+        ResultSet rset = sql.executeQuery("SELECT MIN(DTVAL) DTVAL FROM TGFEST WHERE ATIVO = 'S' AND TIPO = 'P' AND CODPROD = :CODPROD  AND CODEMP = :CODEMP AND DTVAL >= SYSDATE AND (ESTOQUE-RESERVADO) > 0");
         EstoqueVO estoqueVO = (EstoqueVO) EntityFacadeFactory.getDWFFacade().getDefaultValueObjectInstance(DynamicEntityNames.ESTOQUE, EstoqueVO.class);
 
 
@@ -36,7 +37,7 @@ public class Estoque {
         return null;
     }
 
-    public static Timestamp getValidade(BigDecimal codProd, BigDecimal codEmp, BigDecimal codLocal, String controle) throws Exception {
+    public static Timestamp getValidadeLote(BigDecimal codProd, BigDecimal codEmp, BigDecimal codLocal, String controle) throws Exception {
         EntityFacade dwfFacade = null;
         JdbcWrapper jdbc = null;
 
@@ -53,7 +54,6 @@ public class Estoque {
         if (rset.next()) {
             return rset.getTimestamp("DTVAL");
         }
-
 
         return null;
     }

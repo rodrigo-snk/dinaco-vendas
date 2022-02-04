@@ -5,14 +5,15 @@ import br.com.sankhya.jape.event.PersistenceEvent;
 import br.com.sankhya.jape.event.TransactionContext;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.modelcore.MGEModelException;
-import br.com.sankhya.modelcore.comercial.ComercialUtils;
+import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
+import com.sankhya.util.StringUtils;
 
 import java.math.BigDecimal;
 
 
-public class VerificaObservacaoFrete implements EventoProgramavelJava {
+public class OLD_VerificaObservacaoFrete implements EventoProgramavelJava {
     @Override
     public void beforeInsert(PersistenceEvent persistenceEvent) throws Exception {
 
@@ -25,22 +26,21 @@ public class VerificaObservacaoFrete implements EventoProgramavelJava {
         if (!isModifingVLRNOTA) {
             DynamicVO cabVO = (DynamicVO) persistenceEvent.getVo();
             final BigDecimal codEmp = cabVO.asBigDecimal("CODEMP");
-            DynamicVO empVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.EMPRESA, codEmp);
-            //DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
+            DynamicVO empVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.EMPRESA_FINANCEIRO, codEmp);
+            final boolean topVerificaFreteMinimo  = "S".equals(StringUtils.getNullAsEmpty(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_FRETEMIN")));
             final BigDecimal vlrNota = cabVO.asBigDecimalOrZero("VLRNOTA");
             final BigDecimal vlrFreteNota = cabVO.asBigDecimalOrZero("VLRFRETE");
-            final String observacaoFrete = cabVO.asString("AD_OBSFRETE");
+            final String observacaoFrete = StringUtils.getNullAsEmpty(cabVO.asString("AD_OBSFRETE"));
             final BigDecimal minimoFrete = empVO.asBigDecimalOrZero("AD_MINFRETE");
             final BigDecimal vlrFrete = empVO.asBigDecimalOrZero("AD_VLRFRETE");
 
-            final boolean notaMenorQueMinimoFrete = vlrNota.compareTo(minimoFrete) < 1;
-            final boolean freteMenorQueFreteMinimo = vlrFreteNota.compareTo(vlrFrete) < 1;
+            final boolean notaMenorQueMinimoFrete = vlrNota.compareTo(minimoFrete) <= 0;
+            final boolean freteMenorQueFreteMinimo = vlrFreteNota.compareTo(vlrFrete) <= 0;
 
 
-            if (ComercialUtils.ehVenda(cabVO.asString("TIPMOV")) && notaMenorQueMinimoFrete && freteMenorQueFreteMinimo && observacaoFrete == null) {
+            if (topVerificaFreteMinimo && notaMenorQueMinimoFrete && freteMenorQueFreteMinimo && observacaoFrete.isEmpty()) {
                 throw new MGEModelException("Preencha Observação Frete.");
-
-        }
+            }
         }
 
     }

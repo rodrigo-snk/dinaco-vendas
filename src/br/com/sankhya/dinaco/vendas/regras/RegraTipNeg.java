@@ -34,10 +34,13 @@ public class RegraTipNeg implements Regra {
         final BigDecimal codUsuarioLogado = AuthenticationInfo.getCurrent().getUserID();
 
         if (isConfirmandoNota) {
+            DynamicVO notaVO = contextoRegra.getPrePersistEntityState().getNewVO();
 
             if (verificaSugestaoNegociacao(contextoRegra)) {
-                DynamicVO notaVO = contextoRegra.getPrePersistEntityState().getNewVO();
                 liberacaoLimite(contextoRegra, codUsuarioLogado, notaVO, "",1002);
+            } else {
+                LiberacaoAlcadaHelper.apagaSolicitacoEvento(1002, notaVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
+
             }
 
         }
@@ -74,8 +77,8 @@ public class RegraTipNeg implements Regra {
     private boolean verificaSugestaoNegociacao(ContextoRegra contextoRegra) throws Exception {
         BigDecimal codTipVenda = contextoRegra.getPrePersistEntityState().getNewVO().asBigDecimal("CODTIPVENDA");
         DynamicVO topVO = TipoOperacaoUtils.getTopVO(contextoRegra.getPrePersistEntityState().getNewVO().asBigDecimalOrZero("CODTIPOPER"));
-        boolean ehVenda = CabecalhoNota.ehPedidoOuVenda(topVO.asString("TIPMOV"));
-        boolean ehCompra = ComercialUtils.ehCompra(topVO.asString("TIPMOV"));
+        final boolean ehVenda = CabecalhoNota.ehPedidoOuVenda(topVO.asString("TIPMOV"));
+        final boolean ehCompra = ComercialUtils.ehCompra(topVO.asString("TIPMOV"));
 
         DynamicVO complementoParcVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.COMPLEMENTO_PARCEIRO, contextoRegra.getPrePersistEntityState().getNewVO().asBigDecimal("CODPARC"));
         BigDecimal sugestaoEntrada = complementoParcVO.asBigDecimalOrZero("SUGTIPNEGENTR");

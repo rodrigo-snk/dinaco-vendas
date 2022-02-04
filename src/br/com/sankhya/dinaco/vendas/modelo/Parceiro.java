@@ -6,8 +6,10 @@ import br.com.sankhya.jape.wrapper.JapeFactory;
 import br.com.sankhya.jape.wrapper.JapeWrapper;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
+import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.util.*;
 
@@ -36,8 +38,8 @@ public class Parceiro {
         return getParceiroByPK(codParc).asString("AD_RVENC_RECDESP");
     }
 
-    public static int diasVencimentoItem(Object codParc) throws MGEModelException {
-        return getParceiroByPK(codParc).asBigDecimalOrZero("AD_DIAS_VENC_ITEM").intValue();
+    public static int prazoVencimentoItens(Object codParc) throws MGEModelException {
+        return getParceiroByPK(codParc).asBigDecimalOrZero("AD_PRAZOVENCITENS").intValue();
     }
 
     protected static LinkedList<Object> getDias(Map<Object, Boolean> map) {
@@ -97,5 +99,9 @@ public class Parceiro {
 
     public static BigDecimal getCodNat(Object codParc) throws MGEModelException {
         return getParceiroByPK(codParc).asBigDecimalOrZero("AD_CODNAT");
+    }
+
+    public static Timestamp dataLimiteQueClienteAceitaVencimento(BigDecimal codParc) throws MGEModelException {
+        return TimeUtils.dataAdd(TimeUtils.getNow(), prazoVencimentoItens(codParc), 5);
     }
 }

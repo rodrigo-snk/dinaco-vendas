@@ -8,15 +8,11 @@ import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.auth.AuthenticationInfo;
 import br.com.sankhya.modelcore.comercial.*;
-import br.com.sankhya.modelcore.comercial.regras.LiberacaoConfirmacao;
-import br.com.sankhya.modelcore.comercial.util.LoteAutomaticoHelper;
+import br.com.sankhya.modelcore.comercial.regras.EstoqueItem;
 import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
 import br.com.sankhya.modelcore.dwfdata.vo.ItemNotaVO;
-import br.com.sankhya.modelcore.dwfdata.vo.tsi.LiberacaoLimiteVO;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
-import br.com.sankhya.util.troubleshooting.SKError;
-import br.com.sankhya.util.troubleshooting.TSLevel;
 import com.sankhya.util.StringUtils;
 import com.sankhya.util.TimeUtils;
 
@@ -43,51 +39,88 @@ public class RegraLotes implements Regra {
     @Override
     public void beforeUpdate(ContextoRegra contextoRegra) throws Exception {
 
+        final boolean isItemNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("ItemNota");
         final boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
         BigDecimal codUsuarioLogado = AuthenticationInfo.getCurrent().getUserID();
 
 
         if (isConfirmandoNota) {
-            DynamicVO notaVO = contextoRegra.getPrePersistEntityState().getNewVO();
-            Collection<ItemNotaVO> itensVO = EntityFacadeFactory.getDWFFacade().findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.ITEM_NOTA, "this.NUNOTA = ?", notaVO.asBigDecimalOrZero("NUNOTA")), ItemNotaVO.class);
-
-            DynamicVO topVO = TipoOperacaoUtils.getTopVO(notaVO.asBigDecimalOrZero("CODTIPOPER"));
+            DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();
+            Collection<ItemNotaVO> itensVO = EntityFacadeFactory.getDWFFacade().findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.ITEM_NOTA, "this.NUNOTA = ?", cabVO.asBigDecimalOrZero("NUNOTA")), ItemNotaVO.class);
+            final boolean topVerificaFEFO = "S".equals(StringUtils.getNullAsEmpty(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_FEFO")));
 
             String observacao = "";
+            String observacao2 = "";
+            String observacaoFEFO = "";
+
+
 
             for (ItemNotaVO itemVO: itensVO) {
 
-                String controle = getControle(itemVO.asString("CONTROLE"));
-                BigDecimal codEmp = itemVO.asBigDecimalOrZero("CODEMP");
-                BigDecimal codProd = itemVO.asBigDecimalOrZero("CODPROD");
-                BigDecimal codLocal = itemVO.asBigDecimalOrZero("CODLOCALORIG");
-                boolean quebraFEFO = StringUtils.getNullAsEmpty(itemVO.getProperty("AD_QUEBRAFEFO")).equalsIgnoreCase("S");
-                Timestamp validadeLote;
-                Timestamp menorValidade;
+                final String controle = getControle(itemVO.asString("CONTROLE"));
+                if (itemVO.containsProperty("AD_OBSFEFO")) {
+                    observacaoFEFO = itemVO.asString("AD_OBSFEFO");
+                }
+                final BigDecimal codEmp = itemVO.asBigDecimalOrZero("CODEMP");
+                final BigDecimal codProd = itemVO.asBigDecimalOrZero("CODPROD");
+                final BigDecimal codLocal = itemVO.asBigDecimalOrZero("CODLOCALORIG");
 
-                // Se TOP e Local estiverem marcados na regra
-                if (topVO.getProperty("AD_FEFO").equals("S") && !quebraFEFO /* && codLocal &&  */) {
+
+                final boolean quebraFEFO = "S".equalsIgnoreCase(StringUtils.getNullAsEmpty(itemVO.getProperty("AD_QUEBRAFEFO")));
+                final Timestamp validadeLote;
+                final Timestamp menorValidade;
+                final Timestamp dataLimiteQueParceiroAceitaVencimento = Parceiro.dataLimiteQueClienteAceitaVencimento(cabVO.asBigDecimalOrZero("CODPARC"));
+
+                // Se TOP e Quebra FEFO no item estiverem marcados na regra
+                if (topVerificaFEFO && quebraFEFO /* && codLocal &&  */) {
 
                     if (!controle.equals(" ")) {
                         //throw new MGEModelException(String.valueOf(Estoque.getValidade(codProd,codEmp, codLocal,controle)));
-                        validadeLote = Estoque.getValidade(codProd,codEmp, codLocal,controle);
-                        menorValidade = Estoque.getValidadeMinima(codProd, codEmp);
+                        validadeLote = Estoque.getValidadeLote(codProd,codEmp, codLocal,controle);
+                        menorValidade = Estoque.getMenorValidade(codProd, codEmp);
 
-                        // Quando tiver um outro lote de validade menor
+                        // Quando tiver um outro lote de validade menor, preenche observação da liberação
                         if (TimeUtils.compareOnlyDates(validadeLote, menorValidade) > 0) {
-                            observacao = observacao.concat("Produto: " + itemVO.getCODPROD() + " / Lote: " +itemVO.getCONTROLE()+ " / Validade: " +TimeUtils.formataDDMMYYYY(validadeLote) + ";");
+                        observacao = observacao.concat("Produto: " + itemVO.getCODPROD() + " / Lote: " +itemVO.getCONTROLE()+ " / Validade: " +TimeUtils.formataDDMMYYYY(validadeLote) + " Observação FEFO: " +observacaoFEFO+";");
+                        }
+
+                        // Quando tiver um lote com validade inferior ao limtite estipulado no parceiro, preenche observação da liberação
+                        if (validadeLote != null && TimeUtils.compareOnlyDates(validadeLote, dataLimiteQueParceiroAceitaVencimento) < 0) {
+                            //contextoRegra.getBarramentoRegra().addMensagem("Parceiro não aceita produtos com validade menor que " + DIASVENCITEM + " dias.");
+                            observacao2 = observacao2.concat("Produto: " + itemVO.getCODPROD() + " / Lote: " +itemVO.getCONTROLE()+ " / Validade: " +TimeUtils.formataDDMMYYYY(validadeLote) + ";");
                         }
                     }
                 }
             }
 
+
+            // Quando tiver um outro lote de validade menor, exige liberação
             if (!observacao.equals("")) {
-                liberacaoLimite(contextoRegra, codUsuarioLogado, notaVO, observacao, 1001);
+                liberacaoLimite(contextoRegra, codUsuarioLogado, cabVO, observacao, 1001);
             } else {
-                LiberacaoAlcadaHelper.apagaSolicitacoEvento(1001, notaVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
+                LiberacaoAlcadaHelper.apagaSolicitacoEvento(1001, cabVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
             }
 
+            /*// Quando tiver um lote com validade inferior ao limtite estipulado no parceiro exige liberação
+            //TODO Criar evento 1006
+            if (!observacao2.equals("")) {
+                liberacaoLimite(contextoRegra, codUsuarioLogado, cabVO, observacao, 1006);
+            } else {
+                LiberacaoAlcadaHelper.apagaSolicitacoEvento(1006, cabVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
+            }*/
+
         }
+
+        if (isItemNota) {
+            final boolean isModifyingQuebraFEFO = contextoRegra.getPrePersistEntityState().getModifingFields().isModifing("AD_QUEBRAFEFO");
+            final boolean isModifyingControle = contextoRegra.getPrePersistEntityState().getModifingFields().isModifing("CONTROLE");
+
+
+            if (isModifyingQuebraFEFO || isModifyingControle) {
+                verificaLote(contextoRegra);
+            }
+        }
+
     }
 
 
@@ -118,39 +151,34 @@ public class RegraLotes implements Regra {
     private void verificaLote(ContextoRegra contextoRegra) throws Exception {
         DynamicVO itemVO = contextoRegra.getPrePersistEntityState().getNewVO();
         final BigDecimal nuNota = itemVO.asBigDecimalOrZero("NUNOTA");
-        DynamicVO notaVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNota);
-        DynamicVO topVO = TipoOperacaoUtils.getTopVO(notaVO.asBigDecimalOrZero("CODTIPOPER"));
-        final boolean topVerificaFEFO = "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_FEFO")));
+        DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNota);
+        final boolean topVerificaFEFO = "S".equals(StringUtils.getNullAsEmpty(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_FEFO")));
         DynamicVO produtoVO = (DynamicVO)EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.PRODUTO, itemVO.asBigDecimalOrZero("CODPROD"));
 
         String controle = getControle(itemVO.asString("CONTROLE"));
         BigDecimal codEmp = itemVO.asBigDecimalOrZero("CODEMP");
         BigDecimal codProd = itemVO.asBigDecimalOrZero("CODPROD");
         BigDecimal codLocal = itemVO.asBigDecimalOrZero("CODLOCALORIG");
-        boolean quebraFEFO = StringUtils.getNullAsEmpty(itemVO.getProperty("AD_QUEBRAFEFO")).equalsIgnoreCase("S");
+        final boolean quebraFEFO = "S".equals(StringUtils.getNullAsEmpty(itemVO.getProperty("AD_QUEBRAFEFO")));
         //DynamicVO localVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.LOCAL_FINANCEIRO, codLocal);
         Timestamp validadeLote;
         Timestamp menorValidade;
 
         // Se TOP e Local estiverem marcados na regra
-        if (topVerificaFEFO && !quebraFEFO /*  && codLocal &&  */) {
+        if (topVerificaFEFO && !quebraFEFO && !controle.equals(" ")/*  && codLocal &&  */) {
 
-            if (!controle.equals(" ")) {
-                //throw new MGEModelException(String.valueOf(Estoque.getValidade(codProd,codEmp, codLocal,controle)));
+            //throw new MGEModelException(String.valueOf(Estoque.getValidade(codProd,codEmp, codLocal,controle)));
+            validadeLote = Estoque.getValidadeLote(codProd,codEmp, codLocal,controle);
+            menorValidade = Estoque.getMenorValidade(codProd, codEmp);
 
-                validadeLote = Estoque.getValidade(codProd,codEmp, codLocal,controle);
-                menorValidade = Estoque.getValidadeMinima(codProd, codEmp);
-
-                // Quando tiver um outro lote de validade menor
-                if (TimeUtils.compareOnlyDates(validadeLote, menorValidade) > 0) {
-                    contextoRegra.getBarramentoRegra().addMensagem("Existe um outro lote com validade menor: " + TimeUtils.formataDDMMYYYY(menorValidade));
-                }
-
-                //contextoRegra.getBarramentoRegra().addMensagem("Tem lote automático ligado? " + LoteAutomaticoHelper.temLoteAutomaticoLigado(notaVO, itemVO));
-                //contextoRegra.getBarramentoRegra().addMensagem("Local Estoque: " + localVO.getProperty("DESCRLOCAL"));
-                //EstoqueVO estoqueVO = (EstoqueVO) EntityFacadeFactory.getDWFFacade().getDefaultValueObjectInstance(DynamicEntityNames.ESTOQUE, EstoqueVO.class);
+            // Quando tiver um outro lote de validade menor
+            if (TimeUtils.compareOnlyDates(validadeLote, menorValidade) > 0) {
+                //contextoRegra.getBarramentoRegra().addMensagem("Existe um outro lote com validade menor: " + TimeUtils.formataDDMMYYYY(menorValidade));
+                throw new MGEModelException("Existe um outro lote com validade menor: " + TimeUtils.formataDDMMYYYY(menorValidade) + ". Quebra FEFO precisa estar marcado.");
             }
-
+            //contextoRegra.getBarramentoRegra().addMensagem("Tem lote automático ligado? " + LoteAutomaticoHelper.temLoteAutomaticoLigado(cabVO, itemVO));
+            //contextoRegra.getBarramentoRegra().addMensagem("Local Estoque: " + localVO.getProperty("DESCRLOCAL"));
+            //EstoqueVO estoqueVO = (EstoqueVO) EntityFacadeFactory.getDWFFacade().getDefaultValueObjectInstance(DynamicEntityNames.ESTOQUE, EstoqueVO.class);
         }
     }
 
@@ -158,20 +186,19 @@ public class RegraLotes implements Regra {
         DynamicVO itemVO = contextoRegra.getPrePersistEntityState().getNewVO();
         DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, itemVO.asBigDecimalOrZero("NUNOTA"));
         DynamicVO parceiroVO = Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC"));
-        final int DIASVENCITEM = Parceiro.diasVencimentoItem(parceiroVO.asBigDecimalOrZero("CODPARC"));
+        final int prazoVencimentoItens = Parceiro.prazoVencimentoItens(parceiroVO.asBigDecimalOrZero("CODPARC"));
 
         String controle = getControle(itemVO.asString("CONTROLE"));
         BigDecimal codEmp = itemVO.asBigDecimalOrZero("CODEMP");
         BigDecimal codProd = itemVO.asBigDecimalOrZero("CODPROD");
         BigDecimal codLocal = itemVO.asBigDecimalOrZero("CODLOCALORIG");
 
-        Timestamp validadeLote = Estoque.getValidade(codProd,codEmp, codLocal,controle);
-        Timestamp dataLimiteQueClienteAceitaVencimento = TimeUtils.dataAdd(TimeUtils.getNow(), DIASVENCITEM, 5);
+        Timestamp validadeLote = Estoque.getValidadeLote(codProd,codEmp, codLocal,controle);
+        Timestamp dataLimiteQueClienteAceitaVencimento = TimeUtils.dataAdd(TimeUtils.getNow(), prazoVencimentoItens, 5);
 
-        if (validadeLote != null && TimeUtils.compareOnlyDates(validadeLote, dataLimiteQueClienteAceitaVencimento) < 0) {
-            //contextoRegra.getBarramentoRegra().addMensagem("Parceiro não aceita produtos com validade menor que " + DIASVENCITEM + " dias.");
-            throw new MGEModelException("Parceiro " +parceiroVO.asString("NOMEPARC")+" não aceita produtos com validade menor que " + DIASVENCITEM + " dias.");
 
+        if (validadeLote != null && TimeUtils.compareOnlyDates(dataLimiteQueClienteAceitaVencimento, validadeLote) > 0) {
+            throw new MGEModelException("Parceiro " +parceiroVO.asString("NOMEPARC")+" não aceita produtos com validade menor que " + prazoVencimentoItens + " dias.");
         }
     }
 
