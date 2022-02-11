@@ -93,19 +93,6 @@ public class ConciliaReceitaOFX implements AcaoRotinaJava {
                 movimentoBancarioVO.setCONCILIADO("N");
                 movimentoBancarioVO.setVLRMOEDA(BigDecimal.ZERO);
 
-                movimentoBancarioVO.setDTLANC(extratoBancarioVO.asTimestamp("DTLANC"));
-                movimentoBancarioVO.setCODTIPOPER(topVO.asBigDecimalOrZero("CODTIPOPER"));
-                movimentoBancarioVO.setHISTORICO(extratoBancarioVO.asString("HIST"));
-                movimentoBancarioVO.setCODCTABCOINT(contaBancariaVO.getCODCTABCOINT());
-                //movimentoBancarioVO.setNUMDOC(extratoBancarioVO.asBigDecimalOrZero("NRODOC"));
-                movimentoBancarioVO.setCODLANC(BigDecimal.valueOf(16));
-                movimentoBancarioVO.setVLRLANC(extratoBancarioVO.asBigDecimalOrZero("VALOR"));
-                movimentoBancarioVO.setRECDESP(extratoBancarioVO.asBigDecimalOrZero("RECDESP"));
-                movimentoBancarioVO.setORIGMOV("A");
-                //movimentoBancarioVO.setDHCONCILIACAO(TimeUtils.getNow());
-                movimentoBancarioVO.setCONCILIADO("N");
-                movimentoBancarioVO.setVLRMOEDA(BigDecimal.ZERO);
-
                 movimentoBancarioVO2.setProperty("DTLANC", extratoBancarioVO.asTimestamp("DTLANC"));
                 movimentoBancarioVO2.setProperty("CODTIPOPER", topVO.asBigDecimalOrZero("CODTIPOPER"));
                 movimentoBancarioVO2.setProperty("HISTORICO", extratoBancarioVO.asString("HIST"));
@@ -132,9 +119,6 @@ public class ConciliaReceitaOFX implements AcaoRotinaJava {
             } else {
                 contextoAcao.mostraErro("Conta bancária inválida.");
             }
-
-
-
         }
 
         contextoAcao.setMensagemRetorno("Foram conciliados: " +linhas.length);

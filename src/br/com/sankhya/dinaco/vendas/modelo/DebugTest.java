@@ -44,7 +44,7 @@ public class DebugTest {
 
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         // Inicializacao objeto dias do mes
         Map<Object, Boolean> mapDiasMes = new HashMap<>();
 
@@ -147,13 +147,27 @@ public class DebugTest {
 
         Set<String> especies = new HashSet<String>();
 
-        especies.add(null);
-        especies.add(null);
+        //especies.add(null);
+        //especies.add(null);
 
-        especies.add("Teste Especie");
+        //especies.add("Teste Especie");
         System.out.println(especies.size());
 
         especies.forEach(System.out::println);
+
+
+        Timestamp hoje = TimeUtils.getNow();
+
+        final Timestamp ontem = TimeUtils.dataAdd(hoje,-1, 5);
+        final Timestamp amanha = TimeUtils.dataAdd(hoje,1, 5);
+
+
+
+
+        System.out.println("Ontem: " +ontem + "Final de semana: " +TimeUtils.isWeekend(ontem.getTime()));
+        System.out.println("Amanha: " +amanha + "Final de semana: " +TimeUtils.isWeekend(amanha.getTime()));
+
+
 
         //System.out.println(especies.stream().findFirst().get());
 

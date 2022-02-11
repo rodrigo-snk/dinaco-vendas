@@ -35,7 +35,12 @@ public class Produto {
     }
 
     public static String getEspecie(Object codProd) throws MGEModelException {
-        return StringUtils.getEmptyAsNull(getProdutoByPK(codProd).asString("AD_ESPECIE"));
+        return StringUtils.getNullAsEmpty(getProdutoByPK(codProd).asString("AD_ESPECIE"));
     }
 
+
+    public static String getDescricao(BigDecimal codProd) throws MGEModelException {
+        return StringUtils.getNullAsEmpty(getProdutoByPK(codProd).asString("DESCRPROD"));
+
+    }
 }

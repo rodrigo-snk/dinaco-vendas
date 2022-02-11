@@ -35,9 +35,15 @@ public class RegraFrete implements Regra {
 
         if (isConfirmandoNota) {
             DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();
-            final boolean topVerificaFreteMinimo  = "S".equals(StringUtils.getNullAsEmpty(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_FRETEMIN")));
 
-            if (StringUtils.getNullAsEmpty(cabVO.asString("AD_FORMAENTREGA")).isEmpty() && ComercialUtils.ehVenda(cabVO.asString("TIPMOV"))) throw new MGEModelException("Preenchimento da Forma de Entrega é obrigatório.");
+            DynamicVO topVO = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
+
+
+            final boolean topVerificaFreteMinimo  = "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_FRETEMIN")));
+            final boolean entregaAmostra = topVO.containsProperty("AD_ENTREGAAMOSTRA") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_ENTREGAAMOSTRA")));
+
+
+            if (StringUtils.getNullAsEmpty(cabVO.asString("AD_FORMAENTREGA")).isEmpty() && ComercialUtils.ehVenda(cabVO.asString("TIPMOV")) && !entregaAmostra) throw new MGEModelException("Preenchimento da Forma de Entrega é obrigatório.");
 
             final boolean semFrete = "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("CIF_FOB")));
 
@@ -49,8 +55,8 @@ public class RegraFrete implements Regra {
                 final BigDecimal minimoFrete = BigDecimalUtil.getValueOrZero(empVO.asBigDecimalOrZero("AD_MINFRETE"));
                 final BigDecimal vlrFrete = BigDecimalUtil.getValueOrZero(empVO.asBigDecimalOrZero("AD_VLRFRETE"));
 
-                final boolean notaMenorQueMinimoFrete = vlrNota.compareTo(minimoFrete) <= 0;
-                final boolean freteMenorQueFreteMinimo = vlrFreteNota.compareTo(vlrFrete) <= 0;
+                final boolean notaMenorQueMinimoFrete = vlrNota.compareTo(minimoFrete) < 0;
+                final boolean freteMenorQueFreteMinimo = vlrFreteNota.compareTo(vlrFrete) < 0;
 
                 //Verifica se valor da nota e valor do frete são menores que o valor mínimo para frete e valor do frete(fixado) nas preferências da Empresa
                 if (notaMenorQueMinimoFrete && freteMenorQueFreteMinimo) {

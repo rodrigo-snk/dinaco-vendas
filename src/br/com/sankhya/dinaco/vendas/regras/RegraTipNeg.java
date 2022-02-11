@@ -3,51 +3,50 @@ package br.com.sankhya.dinaco.vendas.regras;
 import br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.vo.DynamicVO;
+import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.auth.AuthenticationInfo;
 import br.com.sankhya.modelcore.comercial.*;
-import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
-import br.com.sankhya.modelcore.dwfdata.vo.tsi.LiberacaoLimiteVO;
-import br.com.sankhya.modelcore.util.DynamicEntityNames;
-import br.com.sankhya.modelcore.util.EntityFacadeFactory;
-import com.sankhya.util.BigDecimalUtil;
-import com.sankhya.util.TimeUtils;
+import com.sankhya.util.StringUtils;
 
 import java.math.BigDecimal;
 
+import static br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota.negociacaoDiferenteDaSugerida;
 import static br.com.sankhya.dinaco.vendas.modelo.Financeiro.liberacaoLimite;
 
 public class RegraTipNeg implements Regra {
     @Override
     public void beforeInsert(ContextoRegra contextoRegra) throws Exception {
-        boolean isCabecalhoNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("CabecalhoNota");
+        final boolean isCabecalhoNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("CabecalhoNota");
 
         if (isCabecalhoNota) {
-            verificaSugestaoNegociacao(contextoRegra);
+            negociacaoDiferenteDaSugerida(contextoRegra, contextoRegra.getPrePersistEntityState().getNewVO());
         }
     }
 
     @Override
     public void beforeUpdate(ContextoRegra contextoRegra) throws Exception {
 
-        boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
+        final boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
         final boolean isCabecalhoNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("CabecalhoNota");
         final BigDecimal codUsuarioLogado = AuthenticationInfo.getCurrent().getUserID();
 
         if (isConfirmandoNota) {
-            DynamicVO notaVO = contextoRegra.getPrePersistEntityState().getNewVO();
+            DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();
+            final boolean motivoAlteracaoTipNegociacaoNaoPreenchido = StringUtils.getNullAsEmpty(cabVO.asString("AD_MOTALTTIPNEG")).isEmpty();
 
-            if (verificaSugestaoNegociacao(contextoRegra)) {
-                liberacaoLimite(contextoRegra, codUsuarioLogado, notaVO, "",1002);
+
+            if (negociacaoDiferenteDaSugerida(cabVO)) {
+                if (motivoAlteracaoTipNegociacaoNaoPreenchido) throw new MGEModelException("Preencha o motivo da alteração do tipo de negociação.");
+                liberacaoLimite(contextoRegra, codUsuarioLogado, cabVO, "",1002);
             } else {
-                LiberacaoAlcadaHelper.apagaSolicitacoEvento(1002, notaVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
-
+                LiberacaoAlcadaHelper.apagaSolicitacoEvento(1002, cabVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
             }
 
         }
 
         if (isCabecalhoNota) {
             final boolean isModifyingCODTIPVENDA = contextoRegra.getPrePersistEntityState().getModifingFields().isModifing("CODTIPVENDA");
-            if (isModifyingCODTIPVENDA) verificaSugestaoNegociacao(contextoRegra);
+            if (isModifyingCODTIPVENDA) negociacaoDiferenteDaSugerida(contextoRegra, contextoRegra.getPrePersistEntityState().getNewVO());
         }
 
     }
@@ -74,29 +73,7 @@ public class RegraTipNeg implements Regra {
 
     }
 
-    private boolean verificaSugestaoNegociacao(ContextoRegra contextoRegra) throws Exception {
-        BigDecimal codTipVenda = contextoRegra.getPrePersistEntityState().getNewVO().asBigDecimal("CODTIPVENDA");
-        DynamicVO topVO = TipoOperacaoUtils.getTopVO(contextoRegra.getPrePersistEntityState().getNewVO().asBigDecimalOrZero("CODTIPOPER"));
-        final boolean ehVenda = CabecalhoNota.ehPedidoOuVenda(topVO.asString("TIPMOV"));
-        final boolean ehCompra = ComercialUtils.ehCompra(topVO.asString("TIPMOV"));
 
-        DynamicVO complementoParcVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.COMPLEMENTO_PARCEIRO, contextoRegra.getPrePersistEntityState().getNewVO().asBigDecimal("CODPARC"));
-        BigDecimal sugestaoEntrada = complementoParcVO.asBigDecimalOrZero("SUGTIPNEGENTR");
-        BigDecimal sugestaoSaida = complementoParcVO.asBigDecimalOrZero("SUGTIPNEGSAID");
-
-        if (ehVenda && !BigDecimalUtil.isNullOrZero(sugestaoSaida)) {
-            if (codTipVenda.compareTo(sugestaoSaida) != 0) {
-                contextoRegra.getBarramentoRegra().addMensagem("Tipo de Negociação diferente da sugerida para o parceiro. Necessita liberação na confirmação da nota.");
-                return true;
-            }
-        } else if (ehCompra && !BigDecimalUtil.isNullOrZero(sugestaoEntrada)) {
-            if (codTipVenda.compareTo(sugestaoEntrada) != 0) {
-                contextoRegra.getBarramentoRegra().addMensagem("Tipo de Negociação diferente da sugerida para o parceiro. Necessita liberação na confirmação da nota.");
-                return true;
-            }
-        }
-        return false;
-    }
 
 
 }

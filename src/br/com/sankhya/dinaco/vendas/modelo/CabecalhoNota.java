@@ -9,15 +9,21 @@ import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.jape.wrapper.JapeFactory;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.comercial.ComercialUtils;
+import br.com.sankhya.modelcore.comercial.ContextoRegra;
 import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
 import com.sankhya.util.BigDecimalUtil;
 import com.sankhya.util.StringUtils;
+import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Optional;
+
+import static br.com.sankhya.modelcore.comercial.ComercialUtils.ehCompra;
+import static br.com.sankhya.modelcore.comercial.ComercialUtils.ehVenda;
 
 public class CabecalhoNota {
 
@@ -115,7 +121,7 @@ public class CabecalhoNota {
         } finally {
             JapeSession.close(hnd);
         }
-        return item.isPresent() ? item.get().asBigDecimalOrZero("VLRUNIT") : BigDecimal.ZERO;
+        return item.isPresent() ? item.get().asBigDecimalOrZero("VLRUNITMOE") : BigDecimal.ZERO;
     }
 
     public static void updateCodCenCus(DynamicVO cabVO) throws MGEModelException {
@@ -179,34 +185,51 @@ public class CabecalhoNota {
         }
     }
 
-    public static void verificaFormaEntrega(DynamicVO notaVO) throws Exception {
+    public static void verificaFormaEntrega(DynamicVO cabVO) throws Exception {
+        DynamicVO topVO = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
 
-        final String formaEntrega = StringUtils.getNullAsEmpty(notaVO.asString("AD_FORMAENTREGA"));
+        final boolean entregaAmostra = topVO.containsProperty("AD_ENTREGAAMOSTRA") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_ENTREGAAMOSTRA")));
 
-        switch (formaEntrega) {
-            //CIF 2-4-5-6-7
-            case "2":
-            case "6":
-            case "7":
-                notaVO.setProperty("AD_REDESPACHO", "N");
-                notaVO.setProperty("CIF_FOB","C");
-                break;
-            case "4":
-            case "5":
-                notaVO.setProperty("AD_REDESPACHO", "S");
-                notaVO.setProperty("CIF_FOB","C");
-                break;
-            case "1": //FOB 1
-                notaVO.setProperty("CIF_FOB","F");
-                notaVO.setProperty("AD_REDESPACHO", "N");
-                break;
-            case "3": //Sem Frete
-            default:
-                notaVO.setProperty("CIF_FOB","S");
-                notaVO.setProperty("AD_REDESPACHO", "N");
-                break;
+        if (!entregaAmostra) {
+            final String formaEntrega = StringUtils.getNullAsEmpty(cabVO.asString("AD_FORMAENTREGA"));
+
+            switch (formaEntrega) {
+                //CIF 2-4-5-6-7
+                case "2":
+                case "6":
+                case "7":
+                    cabVO.setProperty("AD_REDESPACHO", "N");
+                    cabVO.setProperty("CIF_FOB","C");
+                    break;
+                case "4":
+                case "5":
+                    cabVO.setProperty("AD_REDESPACHO", "S");
+                    cabVO.setProperty("CIF_FOB","C");
+                    break;
+                case "1": //FOB 1
+                    cabVO.setProperty("CIF_FOB","F");
+                    cabVO.setProperty("AD_REDESPACHO", "N");
+                    break;
+                case "3": //Sem Frete
+                default:
+                    cabVO.setProperty("CIF_FOB","S");
+                    cabVO.setProperty("AD_REDESPACHO", "N");
+                    break;
+            }
         }
-        CabecalhoNota.update(notaVO);
+    }
+
+    public static void verificaCRNaturezaDoParceiro(DynamicVO cabVO) throws MGEModelException {
+        final String tipMov = cabVO.asString("TIPMOV");
+        final BigDecimal codCenCusParceiro = Parceiro.getCodCenCus(cabVO.getProperty("CODPARC"));
+        final BigDecimal codNatParceiro = Parceiro.getCodNat(cabVO.getProperty("CODPARC"));
+
+        // Preeenche com Centro de Custo do Parceiro (TGFPAR.AD_CODCENCUS)
+        // Se TIPMOV in ('O','C','E','P','V', 'D')
+        if ((ehCompra(tipMov) || ehVenda(tipMov))) {
+            if (!BigDecimalUtil.isNullOrZero(codCenCusParceiro)) cabVO.setProperty("CODCENCUS", codCenCusParceiro);
+            if (!BigDecimalUtil.isNullOrZero(codNatParceiro)) cabVO.setProperty("CODNAT", codNatParceiro);;
+        }
     }
 
     /**
@@ -226,5 +249,71 @@ public class CabecalhoNota {
         return StringUtils.getNullAsEmpty(Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC")).asString("AD_EXIGEOC")).equalsIgnoreCase("S")
                 && StringUtils.getNullAsEmpty(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_EXIGEOC")).equalsIgnoreCase("S");
 
+    }
+
+    public static boolean negociacaoDiferenteDaSugerida(ContextoRegra contextoRegra, DynamicVO cabVO) throws Exception {
+        BigDecimal codTipVenda = cabVO.asBigDecimal("CODTIPVENDA");
+        DynamicVO topVO = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
+        final boolean validaSugestao = topVO.containsProperty("AD_VALIDATIPNEG") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_VALIDATIPNEG")));
+        final boolean ehVenda = CabecalhoNota.ehPedidoOuVenda(topVO.asString("TIPMOV"));
+        final boolean ehCompra = ComercialUtils.ehCompra(topVO.asString("TIPMOV"));
+
+        DynamicVO complementoParcVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.COMPLEMENTO_PARCEIRO, cabVO.asBigDecimal("CODPARC"));
+        BigDecimal sugestaoEntrada = complementoParcVO.asBigDecimalOrZero("SUGTIPNEGENTR");
+        BigDecimal sugestaoSaida = complementoParcVO.asBigDecimalOrZero("SUGTIPNEGSAID");
+
+        if (validaSugestao && ehVenda && !BigDecimalUtil.isNullOrZero(sugestaoSaida)) {
+            if (codTipVenda.compareTo(sugestaoSaida) != 0) {
+                contextoRegra.getBarramentoRegra().addMensagem("Tipo de Negociação diferente da sugerida para o parceiro. Necessita liberação na confirmação da nota.");
+                return true;
+            }
+        }
+        if (validaSugestao && ehCompra && !BigDecimalUtil.isNullOrZero(sugestaoEntrada)) {
+            if (codTipVenda.compareTo(sugestaoEntrada) != 0) {
+                contextoRegra.getBarramentoRegra().addMensagem("Tipo de Negociação diferente da sugerida para o parceiro. Necessita liberação na confirmação da nota.");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean negociacaoDiferenteDaSugerida(DynamicVO cabVO) throws Exception {
+        BigDecimal codTipVenda = cabVO.asBigDecimal("CODTIPVENDA");
+        DynamicVO topVO = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
+        final boolean validaSugestao = topVO.containsProperty("AD_VALIDATIPNEG") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_VALIDATIPNEG")));
+        final boolean ehVenda = CabecalhoNota.ehPedidoOuVenda(topVO.asString("TIPMOV"));
+        final boolean ehCompra = ComercialUtils.ehCompra(topVO.asString("TIPMOV"));
+
+        DynamicVO complementoParcVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.COMPLEMENTO_PARCEIRO, cabVO.asBigDecimal("CODPARC"));
+        BigDecimal sugestaoEntrada = complementoParcVO.asBigDecimalOrZero("SUGTIPNEGENTR");
+        BigDecimal sugestaoSaida = complementoParcVO.asBigDecimalOrZero("SUGTIPNEGSAID");
+
+        if (validaSugestao && ehVenda && !BigDecimalUtil.isNullOrZero(sugestaoSaida)) {
+            if (codTipVenda.compareTo(sugestaoSaida) != 0) {
+                return true;
+            }
+        }
+        if (validaSugestao && ehCompra && !BigDecimalUtil.isNullOrZero(sugestaoEntrada)) {
+            return codTipVenda.compareTo(sugestaoEntrada) != 0;
+        }
+        return false;
+    }
+
+    private static BigDecimal getCotacaoDiaAnterior(BigDecimal codMoeda, Timestamp hoje) throws Exception {
+        final Timestamp ontem = TimeUtils.dataAdd(hoje,-1, 5);
+        Collection<DynamicVO> cotVO = EntityFacadeFactory.getDWFFacade().findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.COTACAO_MOEDA, "this.CODMOEDA = ? and this.DTMOV = ?", new Object[] {codMoeda, TimeUtils.clearTime(ontem)}));
+
+        if (!cotVO.stream().findFirst().isPresent()) {
+            getCotacaoDiaAnterior(codMoeda, ontem);
+        }
+
+        return cotVO.stream().findFirst().get().asBigDecimalOrZero("COTACAO");
+    }
+
+    public static void verificaPtaxDiaAnterior(DynamicVO cabVO) throws Exception {
+        DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
+        final boolean ptaxDiaAnterior = topVO.containsProperty("AD_PTAXDIAANT") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_PTAXDIAANT")));
+        final boolean ptaxFixo = cabVO.containsProperty("AD_PTAXFIXO") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_PTAXFIXO")));
+        if (ptaxDiaAnterior && !ptaxFixo) cabVO.setProperty("VLRMOEDA", getCotacaoDiaAnterior(cabVO.asBigDecimalOrZero("CODMOEDA"), TimeUtils.getNow()));
     }
 }
