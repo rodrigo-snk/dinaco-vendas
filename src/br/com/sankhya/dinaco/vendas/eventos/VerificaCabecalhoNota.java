@@ -25,7 +25,7 @@ public class VerificaCabecalhoNota implements EventoProgramavelJava {
         DynamicVO cabVO = (DynamicVO) persistenceEvent.getVo();
 
         verificaCRNaturezaDoParceiro(cabVO);
-        verificaPtaxDiaAnterior(cabVO);
+        verificaPTAX(cabVO);
         verificaFormaEntrega(cabVO);
     }
 
@@ -34,9 +34,11 @@ public class VerificaCabecalhoNota implements EventoProgramavelJava {
         DynamicVO cabVO = (DynamicVO) persistenceEvent.getVo();
         final boolean isModifyingFormaEntrega = persistenceEvent.getModifingFields().isModifing("AD_FORMAENTREGA");
         final boolean isModifyingVlrMoeda = persistenceEvent.getModifingFields().isModifing("VLRMOEDA");
+        final boolean isModifyingParametrosPTAX = persistenceEvent.getModifingFields().isModifing("AD_PTAXFIXO") || persistenceEvent.getModifingFields().isModifing("AD_PTAXMEDIO");
+
 
         if (isModifyingFormaEntrega) verificaFormaEntrega(cabVO);
-        if (isModifyingVlrMoeda) verificaPtaxDiaAnterior(cabVO);
+        if (isModifyingVlrMoeda || isModifyingParametrosPTAX) verificaPTAX(cabVO);
 
         // Na confirmação da nota verifica se a TOP e Parceiro exigem OC.
         // Se OC na nota não estiver preenchido, impede confirmação da nota.

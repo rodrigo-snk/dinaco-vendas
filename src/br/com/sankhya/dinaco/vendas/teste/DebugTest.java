@@ -1,47 +1,29 @@
-package br.com.sankhya.dinaco.vendas.modelo;
+package br.com.sankhya.dinaco.vendas.teste;
 
-import br.com.sankhya.jape.util.FinderWrapper;
-import br.com.sankhya.jape.vo.DynamicVO;
-import br.com.sankhya.jape.vo.EntityVO;
-import br.com.sankhya.modelcore.dwfdata.vo.CabecalhoNotaVO;
-import br.com.sankhya.modelcore.util.DynamicEntityNames;
-import com.sankhya.util.BigDecimalUtil;
+import br.com.sankhya.dinaco.vendas.modelo.Parceiro;
 import com.sankhya.util.StringUtils;
 import com.sankhya.util.TimeUtils;
-import com.sencha.gxt.fx.client.animation.SlideOut;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.mockito.internal.verification.Times;
 
-import javax.jws.Oneway;
 import java.math.BigDecimal;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
 
 public class DebugTest {
 
-    @Test
-    public void blablablabla() {
 
-        assertEquals(new BigDecimal(1030.00), BigDecimal.ZERO);
-
-    }
-    @Test
-    public void setDataLimiteQueClienteAceitaVencimento() {
+    @org.junit.jupiter.api.Test
+    void setDataLimiteQueClienteAceitaVencimento() {
 
         Timestamp dataLimiteQueClienteAceitaVencimento = TimeUtils.dataAdd(TimeUtils.getNow(), 0, 5);
 
-        assertEquals(dataLimiteQueClienteAceitaVencimento, TimeUtils.getNow());
-
-
+        Assertions.assertEquals(dataLimiteQueClienteAceitaVencimento, TimeUtils.getNow());
     }
-
-
 
 
     public static void main(String[] args) throws Exception {
@@ -94,9 +76,8 @@ public class DebugTest {
 
 
         //int dia = 30;
-        LocalDate novoDtVenc = data;
 
-        int diaDoVencimento = novoDtVenc.getDayOfWeek().getValue();
+        int diaDoVencimento = data.getDayOfWeek().getValue();
         int calculoDias = 0;
 
         if (!diasSemana.contains(diaDoVencimento)) {
@@ -117,10 +98,10 @@ public class DebugTest {
         //int calculoDias = 7 - date.getDayOfWeek().getValue() + (int) diasSemana.get(diasSemana.indexOf(5));
         System.out.println("Equation result: " +calculoDias);
 
-        System.out.println("Data de vencimento: "+ novoDtVenc);
-        System.out.println("Nova data de vencimento: "+ novoDtVenc.plusDays(calculoDias));
+        System.out.println("Data de vencimento: "+ data);
+        System.out.println("Nova data de vencimento: "+ data.plusDays(calculoDias));
 
-        System.out.println("Nova data de vencimento proximo: "+ novoDtVenc.plusMonths(1).withDayOfMonth(5));
+        System.out.println("Nova data de vencimento proximo: "+ data.plusMonths(1).withDayOfMonth(5));
 
         System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getMonthEnd(TimeUtils.getNow()), TimeUtils.getNow()));
 
@@ -145,10 +126,10 @@ public class DebugTest {
         System.out.println(StringUtils.getNullAsEmpty("8").isEmpty());
         System.out.println(StringUtils.getNullAsEmpty(null).isEmpty());
 
-        Set<String> especies = new HashSet<String>();
+        Set<String> especies = new HashSet<>();
 
         //especies.add(null);
-        //especies.add(null);
+        especies.add(null);
 
         //especies.add("Teste Especie");
         System.out.println(especies.size());
@@ -161,11 +142,24 @@ public class DebugTest {
         final Timestamp ontem = TimeUtils.dataAdd(hoje,-1, 5);
         final Timestamp amanha = TimeUtils.dataAdd(hoje,1, 5);
 
+        final Timestamp mesPassado = TimeUtils.dataAdd(hoje,-1, 5);
+
+        final Timestamp ultimoDiaMesPassado = TimeUtils.getUltimoDiaDoMesRefAnterior(hoje);
 
 
 
         System.out.println("Ontem: " +ontem + "Final de semana: " +TimeUtils.isWeekend(ontem.getTime()));
         System.out.println("Amanha: " +amanha + "Final de semana: " +TimeUtils.isWeekend(amanha.getTime()));
+
+
+
+        Timestamp primeiroDiaMes = TimeUtils.getMonthStart(hoje);
+        Timestamp ultimoDiaMes = TimeUtils.getMonthEnd(hoje);
+
+        System.out.println(primeiroDiaMes);
+        System.out.println(ultimoDiaMes);
+        System.out.println("Ultimo dia do mês passado: " +ultimoDiaMesPassado);
+
 
 
 

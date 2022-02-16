@@ -1,31 +1,14 @@
 package br.com.sankhya.dinaco.vendas.regras;
 
-import br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota;
 import br.com.sankhya.dinaco.vendas.modelo.Parceiro;
-import br.com.sankhya.jape.EntityFacade;
-import br.com.sankhya.jape.core.JapeSession;
-import br.com.sankhya.jape.dao.JdbcWrapper;
 import br.com.sankhya.jape.util.FinderWrapper;
 import br.com.sankhya.jape.vo.DynamicVO;
-import br.com.sankhya.jape.vo.EntityVO;
-import br.com.sankhya.modelcore.MGEModelException;
-import br.com.sankhya.modelcore.comercial.CentralFinanceiro;
-import br.com.sankhya.modelcore.comercial.ComercialUtils;
 import br.com.sankhya.modelcore.comercial.ContextoRegra;
 import br.com.sankhya.modelcore.comercial.Regra;
-import br.com.sankhya.modelcore.dwfdata.vo.CabecalhoNotaVO;
-import br.com.sankhya.modelcore.dwfdata.vo.ItemNotaVO;
-import br.com.sankhya.modelcore.financeiro.util.FinanceiroUtils;
-import br.com.sankhya.modelcore.util.CentralNotasUtil;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
-import br.com.sankhya.modelcore.util.ParceiroHellper;
-import br.com.sankhya.timimob.model.utils.FinanceiroUtil;
 
-import java.math.BigDecimal;
 import java.util.Collection;
-
-import static br.com.sankhya.modelcore.util.EntityFacadeFactory.getDWFFacade;
 
 public class RegraAvisosCab implements Regra {
     @Override

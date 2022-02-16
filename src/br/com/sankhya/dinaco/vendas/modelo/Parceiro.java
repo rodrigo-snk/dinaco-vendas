@@ -42,7 +42,7 @@ public class Parceiro {
         return getParceiroByPK(codParc).asBigDecimalOrZero("AD_PRAZOVENCITENS").intValue();
     }
 
-    protected static LinkedList<Object> getDias(Map<Object, Boolean> map) {
+    public static LinkedList<Object> getDias(Map<Object, Boolean> map) {
 
         LinkedList<Object> result = new LinkedList<>();
         for (Map.Entry<Object, Boolean> entry : map.entrySet()) {

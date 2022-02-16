@@ -18,6 +18,7 @@ import com.sankhya.util.StringUtils;
 import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Optional;
@@ -304,16 +305,40 @@ public class CabecalhoNota {
         Collection<DynamicVO> cotVO = EntityFacadeFactory.getDWFFacade().findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.COTACAO_MOEDA, "this.CODMOEDA = ? and this.DTMOV = ?", new Object[] {codMoeda, TimeUtils.clearTime(ontem)}));
 
         if (!cotVO.stream().findFirst().isPresent()) {
-            getCotacaoDiaAnterior(codMoeda, ontem);
+            return getCotacaoDiaAnterior(codMoeda, ontem);
         }
 
         return cotVO.stream().findFirst().get().asBigDecimalOrZero("COTACAO");
     }
 
-    public static void verificaPtaxDiaAnterior(DynamicVO cabVO) throws Exception {
+
+    private static BigDecimal getCotacaoMediaPeriodo(BigDecimal codMoeda, Timestamp dtInicio, Timestamp dtFim) throws Exception {
+        Collection<DynamicVO> cotVO = EntityFacadeFactory.getDWFFacade().findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.COTACAO_MOEDA, "this.CODMOEDA = ? and this.DTMOV BETWEEN ? AND ?", new Object[] {codMoeda, dtInicio, dtFim}));
+        BigDecimal soma = cotVO.stream().map(vo -> vo.asBigDecimalOrZero("COTACAO")).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return soma.divide(new BigDecimal(cotVO.size()), RoundingMode.HALF_UP);
+    }
+
+    private static BigDecimal getCotacaoMediaMes(BigDecimal codMoeda) throws Exception {
+        Timestamp hoje = TimeUtils.getNow();
+        return getCotacaoMediaPeriodo(codMoeda, TimeUtils.getMonthStart(hoje), TimeUtils.getMonthEnd(hoje));
+    }
+
+    private static BigDecimal getCotacaoMediaMesAnterior(BigDecimal codMoeda) throws Exception {
+        Timestamp ultimoDiaMesPassado = TimeUtils.getUltimoDiaDoMesRefAnterior(TimeUtils.getNow());
+        Timestamp primeiroDiaMesPassado = TimeUtils.getMonthStart(ultimoDiaMesPassado);
+
+        return getCotacaoMediaPeriodo(codMoeda, primeiroDiaMesPassado, ultimoDiaMesPassado);
+    }
+
+    public static void verificaPTAX(DynamicVO cabVO) throws Exception {
         DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
+
         final boolean ptaxDiaAnterior = topVO.containsProperty("AD_PTAXDIAANT") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_PTAXDIAANT")));
-        final boolean ptaxFixo = cabVO.containsProperty("AD_PTAXFIXO") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_PTAXFIXO")));
+        final boolean ptaxFixo = cabVO.containsProperty("AD_PTAXFIXO") && "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_PTAXFIXO")));
+        final boolean ptaxMedio = cabVO.containsProperty("AD_PTAXMEDIO") && "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_PTAXMEDIO")));
+
         if (ptaxDiaAnterior && !ptaxFixo) cabVO.setProperty("VLRMOEDA", getCotacaoDiaAnterior(cabVO.asBigDecimalOrZero("CODMOEDA"), TimeUtils.getNow()));
+
+        if (ptaxMedio) cabVO.setProperty("VLRMOEDA", getCotacaoMediaMesAnterior(cabVO.asBigDecimalOrZero("CODMOEDA")));
     }
 }
