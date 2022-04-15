@@ -1,5 +1,6 @@
 package br.com.sankhya.dinaco.vendas.modelo;
 
+import br.com.sankhya.dwf.controller.util.DynamicUtil;
 import br.com.sankhya.jape.EntityFacade;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.dao.JdbcWrapper;
@@ -8,8 +9,9 @@ import br.com.sankhya.jape.util.FinderWrapper;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.jape.wrapper.JapeFactory;
 import br.com.sankhya.modelcore.MGEModelException;
-import br.com.sankhya.modelcore.comercial.ComercialUtils;
-import br.com.sankhya.modelcore.comercial.ContextoRegra;
+import br.com.sankhya.modelcore.auth.AuthenticationInfo;
+import br.com.sankhya.modelcore.comercial.*;
+import br.com.sankhya.modelcore.comercial.centrais.CACHelper;
 import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
@@ -122,7 +124,7 @@ public class CabecalhoNota {
         } finally {
             JapeSession.close(hnd);
         }
-        return item.isPresent() ? item.get().asBigDecimalOrZero("VLRUNITMOE") : BigDecimal.ZERO;
+        return item.isPresent() ? item.get().asBigDecimal("VLRUNITMOE") : BigDecimal.ZERO;
     }
 
     public static void updateCodCenCus(DynamicVO cabVO) throws MGEModelException {
@@ -247,13 +249,13 @@ public class CabecalhoNota {
         }
     }
     public static boolean exigeOC(DynamicVO cabVO) throws Exception {
-        return StringUtils.getNullAsEmpty(Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC")).asString("AD_EXIGEOC")).equalsIgnoreCase("S")
-                && StringUtils.getNullAsEmpty(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_EXIGEOC")).equalsIgnoreCase("S");
+        return "S".equals(StringUtils.getNullAsEmpty(Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC")).asString("AD_EXIGEOC")))
+                && "S".equals(StringUtils.getNullAsEmpty(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_EXIGEOC")));
 
     }
 
     public static boolean negociacaoDiferenteDaSugerida(ContextoRegra contextoRegra, DynamicVO cabVO) throws Exception {
-        BigDecimal codTipVenda = cabVO.asBigDecimal("CODTIPVENDA");
+        BigDecimal codTipVenda = cabVO.asBigDecimal("CODTIPVENDA"); // VERIFICAR QUANDO AO ALTERAR O TIPNEG O CABEÇALHO
         DynamicVO topVO = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
         final boolean validaSugestao = topVO.containsProperty("AD_VALIDATIPNEG") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_VALIDATIPNEG")));
         final boolean ehVenda = CabecalhoNota.ehPedidoOuVenda(topVO.asString("TIPMOV"));
@@ -301,6 +303,7 @@ public class CabecalhoNota {
     }
 
     private static BigDecimal getCotacaoDiaAnterior(BigDecimal codMoeda, Timestamp hoje) throws Exception {
+        if (BigDecimalUtil.isNullOrZero(codMoeda)) return BigDecimal.ZERO;
         final Timestamp ontem = TimeUtils.dataAdd(hoje,-1, 5);
         Collection<DynamicVO> cotVO = EntityFacadeFactory.getDWFFacade().findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.COTACAO_MOEDA, "this.CODMOEDA = ? and this.DTMOV = ?", new Object[] {codMoeda, TimeUtils.clearTime(ontem)}));
 
@@ -313,6 +316,7 @@ public class CabecalhoNota {
 
 
     private static BigDecimal getCotacaoMediaPeriodo(BigDecimal codMoeda, Timestamp dtInicio, Timestamp dtFim) throws Exception {
+        if (BigDecimalUtil.isNullOrZero(codMoeda)) return null;
         Collection<DynamicVO> cotVO = EntityFacadeFactory.getDWFFacade().findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.COTACAO_MOEDA, "this.CODMOEDA = ? and this.DTMOV BETWEEN ? AND ?", new Object[] {codMoeda, dtInicio, dtFim}));
         BigDecimal soma = cotVO.stream().map(vo -> vo.asBigDecimalOrZero("COTACAO")).reduce(BigDecimal.ZERO, BigDecimal::add);
         return soma.divide(new BigDecimal(cotVO.size()), RoundingMode.HALF_UP);
@@ -324,6 +328,7 @@ public class CabecalhoNota {
     }
 
     private static BigDecimal getCotacaoMediaMesAnterior(BigDecimal codMoeda) throws Exception {
+        if (BigDecimalUtil.isNullOrZero(codMoeda)) return null;
         Timestamp ultimoDiaMesPassado = TimeUtils.getUltimoDiaDoMesRefAnterior(TimeUtils.getNow());
         Timestamp primeiroDiaMesPassado = TimeUtils.getMonthStart(ultimoDiaMesPassado);
 
@@ -331,14 +336,29 @@ public class CabecalhoNota {
     }
 
     public static void verificaPTAX(DynamicVO cabVO) throws Exception {
-        DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
 
-        final boolean ptaxDiaAnterior = topVO.containsProperty("AD_PTAXDIAANT") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_PTAXDIAANT")));
-        final boolean ptaxFixo = cabVO.containsProperty("AD_PTAXFIXO") && "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_PTAXFIXO")));
-        final boolean ptaxMedio = cabVO.containsProperty("AD_PTAXMEDIO") && "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_PTAXMEDIO")));
+        if (!BigDecimalUtil.isNullOrZero(cabVO.asBigDecimal("CODMOEDA"))) {
+            DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
+            DynamicVO moedaVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO("Moeda", cabVO.asBigDecimal("CODMOEDA"));
 
-        if (ptaxDiaAnterior && !ptaxFixo) cabVO.setProperty("VLRMOEDA", getCotacaoDiaAnterior(cabVO.asBigDecimalOrZero("CODMOEDA"), TimeUtils.getNow()));
+            final boolean moedaTemPtaxMedio = moedaVO.asDymamicVO("Moeda_AD001") != null && moedaVO.containsProperty("AD_PTAXMEDIO") && "S".equals(StringUtils.getNullAsEmpty(moedaVO.asDymamicVO("Moeda_AD001").asString("AD_PTAXMEDIO")));
+            final boolean ptaxDiaAnterior = topVO.containsProperty("AD_PTAXDIAANT") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_PTAXDIAANT")));
+            final boolean ptaxFixo = cabVO.containsProperty("AD_PTAXFIXO") && "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_PTAXFIXO")));
+            final boolean ptaxMedio = cabVO.containsProperty("AD_PTAXMEDIO") && "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_PTAXMEDIO")));
 
-        if (ptaxMedio) cabVO.setProperty("VLRMOEDA", getCotacaoMediaMesAnterior(cabVO.asBigDecimalOrZero("CODMOEDA")));
+            if (ptaxDiaAnterior && !ptaxFixo) cabVO.setProperty("VLRMOEDA", getCotacaoDiaAnterior(cabVO.asBigDecimal("CODMOEDA"), TimeUtils.getNow()));
+
+            if (ptaxMedio) {
+                if (!moedaTemPtaxMedio) throw new MGEModelException("Moeda não tem PTAX médio. Verificar rotina Valores de Moeda.");
+                cabVO.setProperty("VLRMOEDA", getCotacaoDiaAnterior(moedaVO.asBigDecimal("AD_CODMOEDAMEDIO"), TimeUtils.getNow()));
+            }
+        }
+
+    }
+
+    public static void confirmaNota(BigDecimal nuNota) throws Exception {
+        BarramentoRegra barramentoConfirmacao = BarramentoRegra.build(CentralFaturamento.class, "regrasConfirmacaoSilenciosa.xml", AuthenticationInfo.getCurrent());
+        barramentoConfirmacao.setValidarSilencioso(true);
+        ConfirmacaoNotaHelper.confirmarNota(nuNota, barramentoConfirmacao);
     }
 }

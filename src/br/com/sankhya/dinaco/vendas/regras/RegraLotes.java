@@ -8,9 +8,9 @@ import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.auth.AuthenticationInfo;
 import br.com.sankhya.modelcore.comercial.*;
-import br.com.sankhya.modelcore.comercial.regras.EstoqueItem;
 import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
 import br.com.sankhya.modelcore.dwfdata.vo.ItemNotaVO;
+import br.com.sankhya.modelcore.metadata.DataDictionaryUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
 import com.sankhya.util.StringUtils;
@@ -22,26 +22,29 @@ import java.util.Collection;
 
 import static br.com.sankhya.dinaco.vendas.modelo.Financeiro.liberacaoLimite;
 
+
 public class RegraLotes implements Regra {
+
+    boolean incluindoAlterandoItem = JapeSession.getPropertyAsBoolean("ItemNota.incluindo.alterando.pela.central", false);
+
     @Override
     public void beforeInsert(ContextoRegra contextoRegra) throws Exception {
         final boolean isItemNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("ItemNota");
 
         if (isItemNota) {
-
-            verificaLote(contextoRegra);
-            verificaValidade(contextoRegra);
+            DynamicVO itemVO = contextoRegra.getPrePersistEntityState().getNewVO();
+            verificaValidade(itemVO);
+            verificaLote(itemVO);
         }
 
     }
 
-
     @Override
     public void beforeUpdate(ContextoRegra contextoRegra) throws Exception {
 
-        final boolean isItemNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("ItemNota");
         final boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
-        BigDecimal codUsuarioLogado = AuthenticationInfo.getCurrent().getUserID();
+        final boolean isItemNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("ItemNota");
+        final BigDecimal codUsuarioLogado = AuthenticationInfo.getCurrent().getUserID();
 
 
         if (isConfirmandoNota) {
@@ -52,8 +55,6 @@ public class RegraLotes implements Regra {
             String observacao = "";
             String observacao2 = "";
             String observacaoFEFO = "";
-
-
 
             for (ItemNotaVO itemVO: itensVO) {
 
@@ -112,13 +113,12 @@ public class RegraLotes implements Regra {
         }
 
         if (isItemNota) {
-            final boolean isModifyingQuebraFEFO = contextoRegra.getPrePersistEntityState().getModifingFields().isModifing("AD_QUEBRAFEFO");
-            final boolean isModifyingControle = contextoRegra.getPrePersistEntityState().getModifingFields().isModifing("CONTROLE");
+            //final boolean isModifyingQuebraFEFO = contextoRegra.getPrePersistEntityState().getModifingFields().isModifing("AD_QUEBRAFEFO");
+            //final boolean isModifyingControle = contextoRegra.getPrePersistEntityState().getModifingFields().isModifing("CONTROLE");
 
-
-            if (isModifyingQuebraFEFO || isModifyingControle) {
-                verificaLote(contextoRegra);
-            }
+           // if (isModifyingQuebraFEFO || isModifyingControle) {
+                verificaLote(contextoRegra.getPrePersistEntityState().getNewVO());
+          //  }
         }
 
     }
@@ -142,30 +142,40 @@ public class RegraLotes implements Regra {
     @Override
     public void afterDelete(ContextoRegra contextoRegra) throws Exception {
 
+        final boolean isItemNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("ItemNota");
+
+        if (isItemNota) {
+            Collection<DynamicVO> itens = EntityFacadeFactory.getDWFFacade().findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.ITEM_NOTA,"this.NUNOTA = ?", contextoRegra.getPrePersistEntityState().getOldVO().asBigDecimal("NUNOTA")));
+
+            for (DynamicVO vo : itens) {
+                verificaLote(vo);
+            }
+
+        }
+
     }
 
     public static String getControle(String controle) {
         return (StringUtils.getEmptyAsNull(controle) == null) ? " " : controle.trim();
     }
 
-    private void verificaLote(ContextoRegra contextoRegra) throws Exception {
-        DynamicVO itemVO = contextoRegra.getPrePersistEntityState().getNewVO();
-        final BigDecimal nuNota = itemVO.asBigDecimalOrZero("NUNOTA");
-        DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNota);
-        final boolean topVerificaFEFO = "S".equals(StringUtils.getNullAsEmpty(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_FEFO")));
-        DynamicVO produtoVO = (DynamicVO)EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.PRODUTO, itemVO.asBigDecimalOrZero("CODPROD"));
+    private void verificaLote(DynamicVO itemVO) throws Exception {
+        DynamicVO cabVO = itemVO.asDymamicVO("CabecalhoNota");
 
-        String controle = getControle(itemVO.asString("CONTROLE"));
-        BigDecimal codEmp = itemVO.asBigDecimalOrZero("CODEMP");
-        BigDecimal codProd = itemVO.asBigDecimalOrZero("CODPROD");
-        BigDecimal codLocal = itemVO.asBigDecimalOrZero("CODLOCALORIG");
+        final boolean topVerificaFEFO = "S".equals(StringUtils.getNullAsEmpty(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_FEFO")));
+        final boolean localVerificaFEFO = "S".equals(itemVO.asDymamicVO("LocalFinanceiro").asString("AD_FEFO"));
         final boolean quebraFEFO = "S".equals(StringUtils.getNullAsEmpty(itemVO.getProperty("AD_QUEBRAFEFO")));
-        //DynamicVO localVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.LOCAL_FINANCEIRO, codLocal);
-        Timestamp validadeLote;
-        Timestamp menorValidade;
+        String controle = getControle(itemVO.asString("CONTROLE"));
 
         // Se TOP e Local estiverem marcados na regra
-        if (topVerificaFEFO && !quebraFEFO && !controle.equals(" ")/*  && codLocal &&  */) {
+        if (topVerificaFEFO && localVerificaFEFO && !quebraFEFO && !controle.equals(" ")) {
+
+            BigDecimal codEmp = itemVO.asBigDecimalOrZero("CODEMP");
+            BigDecimal codProd = itemVO.asBigDecimalOrZero("CODPROD");
+            BigDecimal codLocal = itemVO.asBigDecimalOrZero("CODLOCALORIG");
+            //DynamicVO localVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.LOCAL_FINANCEIRO, codLocal);
+            Timestamp validadeLote;
+            Timestamp menorValidade;
 
             //throw new MGEModelException(String.valueOf(Estoque.getValidade(codProd,codEmp, codLocal,controle)));
             validadeLote = Estoque.getValidadeLote(codProd,codEmp, codLocal,controle);
@@ -173,17 +183,12 @@ public class RegraLotes implements Regra {
 
             // Quando tiver um outro lote de validade menor
             if (TimeUtils.compareOnlyDates(validadeLote, menorValidade) > 0) {
-                //contextoRegra.getBarramentoRegra().addMensagem("Existe um outro lote com validade menor: " + TimeUtils.formataDDMMYYYY(menorValidade));
-                throw new MGEModelException("Existe um outro lote com validade menor: " + TimeUtils.formataDDMMYYYY(menorValidade) + ". Quebra FEFO precisa estar marcado.");
+                throw new MGEModelException(String.format("Existe um lote com validade menor: %s. Quebra FEFO precisa estar marcado.", TimeUtils.formataDDMMYYYY(menorValidade)));
             }
-            //contextoRegra.getBarramentoRegra().addMensagem("Tem lote automático ligado? " + LoteAutomaticoHelper.temLoteAutomaticoLigado(cabVO, itemVO));
-            //contextoRegra.getBarramentoRegra().addMensagem("Local Estoque: " + localVO.getProperty("DESCRLOCAL"));
-            //EstoqueVO estoqueVO = (EstoqueVO) EntityFacadeFactory.getDWFFacade().getDefaultValueObjectInstance(DynamicEntityNames.ESTOQUE, EstoqueVO.class);
         }
     }
 
-    private void verificaValidade(ContextoRegra contextoRegra) throws Exception {
-        DynamicVO itemVO = contextoRegra.getPrePersistEntityState().getNewVO();
+    private void verificaValidade(DynamicVO itemVO) throws Exception {
         DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, itemVO.asBigDecimalOrZero("NUNOTA"));
         DynamicVO parceiroVO = Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC"));
         final int prazoVencimentoItens = Parceiro.prazoVencimentoItens(parceiroVO.asBigDecimalOrZero("CODPARC"));
@@ -195,6 +200,10 @@ public class RegraLotes implements Regra {
 
         Timestamp validadeLote = Estoque.getValidadeLote(codProd,codEmp, codLocal,controle);
         Timestamp dataLimiteQueClienteAceitaVencimento = TimeUtils.dataAdd(TimeUtils.getNow(), prazoVencimentoItens, 5);
+
+        if (validadeLote != null && TimeUtils.compareOnlyDates(validadeLote, TimeUtils.getNow()) < 0) {
+            throw new MGEModelException(String.format("Validade do lote %s expirou em %s.", controle, TimeUtils.formataDDMMYYYY(validadeLote)));
+        }
 
 
         if (validadeLote != null && TimeUtils.compareOnlyDates(dataLimiteQueClienteAceitaVencimento, validadeLote) > 0) {

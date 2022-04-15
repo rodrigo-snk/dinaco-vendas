@@ -1,7 +1,5 @@
 package br.com.sankhya.dinaco.vendas.eventos;
 
-import br.com.sankhya.checkout.helpers.ParametroHelper;
-import br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota;
 import br.com.sankhya.extensions.eventoprogramavel.EventoProgramavelJava;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.dao.JdbcWrapper;
@@ -9,17 +7,15 @@ import br.com.sankhya.jape.event.PersistenceEvent;
 import br.com.sankhya.jape.event.TransactionContext;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.modelcore.MGEModelException;
-import br.com.sankhya.modelcore.facades.avisossistema.OSMensagemAvisoCtx;
+import br.com.sankhya.modelcore.metadata.DataDictionaryUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
-import br.com.sankhya.modelcore.util.ParameterUtils;
-import br.com.sankhya.pes.model.helpers.NotificacoesAppHelper;
 import com.sankhya.util.BigDecimalUtil;
+import com.sankhya.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.Collection;
 
-public class ImpedeFaturamentoCotacao implements EventoProgramavelJava {
+public class ImpedeFaturamentoExportacao implements EventoProgramavelJava {
     @Override
     public void beforeInsert(PersistenceEvent persistenceEvent) throws Exception {
     }
@@ -52,19 +48,18 @@ public class ImpedeFaturamentoCotacao implements EventoProgramavelJava {
             //Nota destino
             DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNota);
             //final boolean ehPedido = cabVO.asString("TIPMOV").equalsIgnoreCase("P");
-            final boolean ehContaEOrdem = cabVO.asBigDecimalOrZero("CODTIPOPER").compareTo(BigDecimal.valueOf(1030)) == 0; // 1030 - Pedido de Venda - Conta e Ordem
+            final boolean ehExportacao = DataDictionaryUtils.campoExisteEmTabela("AD_EXPORTACAO", "TGFTOP") && "S".equals(cabVO.asDymamicVO("TipoOperacao").asString("AD_EXPORTACAO"));
 
             // Nota de Origem
             DynamicVO cabOrigVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNotaOrig);
-            final boolean ehCotacaoOrig = cabOrigVO.asBigDecimalOrZero("CODTIPOPER").compareTo(BigDecimal.valueOf(901)) == 0; // 901 - Cotação de Venda
-            final boolean temTerceirista = !BigDecimalUtil.isNullOrZero(cabOrigVO.asBigDecimalOrZero("CODPARCDEST"));
+            final boolean parceiroEstrangeiro = !StringUtils.getNullAsEmpty(cabOrigVO.asDymamicVO("Parceiro").asString("IDESTRANGEIRO")).isEmpty();
 
-            // Se TOP de faturamento não for 1030 - Pedido de Venda - Conta e Ordem, TOP origem for 901 - Cotação de Venda e Terceirista estiver preenchido
+            // Se TOP de destino estiver marcada como exportação e o parceiro for estrangeiro
             // Impede o faturamento
-            if (ehCotacaoOrig && !ehContaEOrdem && temTerceirista) {
-                throw new MGEModelException("Somente é possível faturar Cotação de Venda (901) com terceirista para Pedido de Venda - Compra e Ordem (1030).");
-            } else if (ehCotacaoOrig && ehContaEOrdem && !temTerceirista) {
-                throw new MGEModelException("Somente é possível faturar Cotação de Venda (901) para Pedido de Venda - Compra e Ordem (1030) com terceirista preenchido.");
+            if (ehExportacao && !parceiroEstrangeiro) {
+                throw new MGEModelException("Somente é possível faturar para esta TOP com parceiros estrangeiros.");
+            } else if (!ehExportacao && parceiroEstrangeiro) {
+                throw new MGEModelException("Para parceiros estrangeiros só é possível faturar para TOPs do tipo exportação");
             }
 
         } finally {

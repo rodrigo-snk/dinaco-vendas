@@ -13,6 +13,10 @@ import java.util.Collection;
 
 import static br.com.sankhya.dinaco.vendas.modelo.Financeiro.getFinanceirosByNunota;
 
+
+/**
+ * Regra de negócio substituída pelo evento VerificaFinanceiroSemTipoDeTitulo
+ */
 public class RegraTipoTitulo implements Regra {
     @Override
     public void beforeInsert(ContextoRegra contextoRegra) throws Exception {

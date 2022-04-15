@@ -10,20 +10,14 @@ import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.jape.vo.EntityVO;
 import br.com.sankhya.jape.wrapper.JapeFactory;
 import br.com.sankhya.jape.wrapper.JapeWrapper;
-import br.com.sankhya.mgecomercial.model.facades.helpper.FinanceiroHelpper;
-import br.com.sankhya.modelcore.MGEModelException;
-import br.com.sankhya.modelcore.auth.AuthenticationInfo;
 import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
 import br.com.sankhya.modelcore.dwfdata.vo.tgf.ContaBancariaVO;
 import br.com.sankhya.modelcore.dwfdata.vo.tgf.MovimentoBancarioVO;
-import br.com.sankhya.modelcore.financeiro.util.FinanceiroUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
-import br.com.sankhya.modelcore.util.FinanceiroHelper;
 import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.util.Optional;
 
 public class ConciliaReceitaOFX implements AcaoRotinaJava {

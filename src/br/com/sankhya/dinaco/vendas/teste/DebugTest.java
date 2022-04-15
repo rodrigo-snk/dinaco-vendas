@@ -1,9 +1,12 @@
 package br.com.sankhya.dinaco.vendas.teste;
 
+import br.com.sankhya.dinaco.vendas.modelo.Financeiro;
 import br.com.sankhya.dinaco.vendas.modelo.Parceiro;
+import br.com.sankhya.modelcore.comercial.LimiteCreditoHelpper;
 import com.sankhya.util.StringUtils;
 import com.sankhya.util.TimeUtils;
 import org.junit.jupiter.api.Assertions;
+import org.mockito.cglib.core.Local;
 import org.mockito.internal.verification.Times;
 
 import java.math.BigDecimal;
@@ -103,13 +106,19 @@ public class DebugTest {
 
         System.out.println("Nova data de vencimento proximo: "+ data.plusMonths(1).withDayOfMonth(5));
 
-        System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getMonthEnd(TimeUtils.getNow()), TimeUtils.getNow()));
 
         final int AD_DIAS_VENC_ITEM = 0;
 
-        Timestamp dtVencItem = TimeUtils.buildTimestamp("01/03/2022");
+        LocalDate dtVencItem = TimeUtils.buildTimestamp("12/03/2022").toLocalDateTime().toLocalDate();
 
-        System.out.println(dtVencItem);
+        System.out.println(TimeUtils.compareOnlyDates(TimeUtils.buildTimestamp("12/03/2022"), TimeUtils.getNow()));
+
+
+        while (Financeiro.fimDeSemana(dtVencItem)) {
+            dtVencItem = dtVencItem.plusDays(1);
+            System.out.println("VENC: "+dtVencItem);
+        }
+
 
         System.out.println(TimeUtils.dataAdd(TimeUtils.getNow(), AD_DIAS_VENC_ITEM, 5));
 
@@ -152,13 +161,14 @@ public class DebugTest {
         System.out.println("Amanha: " +amanha + "Final de semana: " +TimeUtils.isWeekend(amanha.getTime()));
 
 
-
         Timestamp primeiroDiaMes = TimeUtils.getMonthStart(hoje);
         Timestamp ultimoDiaMes = TimeUtils.getMonthEnd(hoje);
 
         System.out.println(primeiroDiaMes);
         System.out.println(ultimoDiaMes);
         System.out.println("Ultimo dia do mês passado: " +ultimoDiaMesPassado);
+
+
 
 
 

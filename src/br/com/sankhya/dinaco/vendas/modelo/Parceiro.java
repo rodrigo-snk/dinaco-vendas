@@ -1,14 +1,20 @@
 package br.com.sankhya.dinaco.vendas.modelo;
 
+import br.com.sankhya.jape.EntityFacade;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.vo.DynamicVO;
+import br.com.sankhya.jape.vo.EntityVO;
 import br.com.sankhya.jape.wrapper.JapeFactory;
 import br.com.sankhya.jape.wrapper.JapeWrapper;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
+import br.com.sankhya.modelcore.util.EntityFacadeFactory;
+import com.sankhya.model.entities.vo.ContatoVO;
+import com.sankhya.model.entities.vo.ContatoVOBasico;
 import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
+import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.util.*;
@@ -28,6 +34,20 @@ public class Parceiro {
             JapeSession.close(hnd);
         }
         return parceiroVO;
+    }
+
+    public static String cadastraContato(DynamicVO parcVO, String nomeContato) throws Exception {
+        EntityFacade dwfFacade = EntityFacadeFactory.getDWFFacade();
+        DynamicVO contatoVO = (DynamicVO) dwfFacade.getDefaultValueObjectInstance(DynamicEntityNames.CONTATO);
+
+        contatoVO.setProperty("CODPARC", parcVO.asBigDecimal("CODPARC"));
+        contatoVO.setProperty("NOMECONTATO", nomeContato);
+        contatoVO.setProperty("DTCAD", TimeUtils.getNow());
+        contatoVO.setProperty("ATIVO", "S");
+        dwfFacade.createEntity(DynamicEntityNames.CONTATO, (EntityVO) contatoVO);
+
+        return String.format("Contato %s cadastrado com sucesso para o parceiro %s", contatoVO.asString("NOMECONTATO"), contatoVO.asDymamicVO("Parceiro").asString("NOMEPARC"));
+
     }
 
     public static String tipoVencimento(Object codParc) throws MGEModelException {

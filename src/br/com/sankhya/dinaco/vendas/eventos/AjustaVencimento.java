@@ -47,7 +47,7 @@ public class AjustaVencimento implements EventoProgramavelJava {
             boolean isDespesa = recDesp.compareTo(BigDecimal.valueOf(-1)) == 0;
 
             //Verifica regra para opção receita/despesa
-            boolean atualiza = Parceiro.tipoRegra(codParc).equalsIgnoreCase("A") || ((Parceiro.tipoRegra(codParc).equalsIgnoreCase("D") && isDespesa) || ((Parceiro.tipoRegra(codParc).equalsIgnoreCase("R") && isReceita)));
+            boolean atualiza = "A".equals(Parceiro.tipoRegra(codParc)) || (("D".equals(Parceiro.tipoRegra(codParc)) && isDespesa) || (("R".equals(Parceiro.tipoRegra(codParc)) && isReceita)));
 
             switch (Parceiro.tipoVencimento(codParc)){
                 case "S":

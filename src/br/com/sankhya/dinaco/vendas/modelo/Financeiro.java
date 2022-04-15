@@ -18,6 +18,7 @@ import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Collection;
@@ -65,7 +66,6 @@ public class Financeiro {
         int diaDoVencimento = dtVenc.getDayOfWeek().getValue();
         int calculoDias = 0;
        for (Object dia : diasSemana) {
-           //if (true) throw new MGEModelException("DEURUIM" + diasSemana.peekLast());
            if (diaDoVencimento > (Integer) diasSemana.peekLast()) {
                calculoDias = 7 - diaDoVencimento + (Integer) diasSemana.peekFirst();
                break;
@@ -77,15 +77,15 @@ public class Financeiro {
         return dtVenc.plusDays(calculoDias);
     }
 
-    public static LocalDate calculaVencimentoMes(LocalDate dtVenc, LinkedList<Object> diasMes) throws MGEModelException {
+    public static LocalDate calculaVencimentoMes(LocalDate dtVenc, LinkedList<Object> diasMes) {
         int diaDoVencimento = dtVenc.getDayOfMonth();
-        int lengthOfMonth = dtVenc.lengthOfMonth();
+        int tamanhodoMes = dtVenc.lengthOfMonth();
 
         for (Object dia : diasMes) {
             if (diaDoVencimento > (Integer) diasMes.peekLast()) {
                 dtVenc = dtVenc.withDayOfMonth((Integer) diasMes.peekFirst()).plusMonths(1);
                 break;
-            } else if ((Integer) dia > diaDoVencimento && (Integer) dia <= lengthOfMonth) {
+            } else if ((Integer) dia > diaDoVencimento && (Integer) dia <= tamanhodoMes) {
                 dtVenc = dtVenc.withDayOfMonth((Integer) dia);
                 break;
             }
@@ -101,13 +101,16 @@ public class Financeiro {
             .prepareToUpdateByPK(nuFin)
             .set("DTVENC", Timestamp.valueOf(dtVenc.atTime(LocalTime.MIDNIGHT)))
             .update();
-           // if (true) throw new MGEModelException(String.valueOf(Timestamp.valueOf(dtVenc.atTime(LocalTime.MIDNIGHT))));
         } catch (Exception e) {
             MGEModelException.throwMe(e);
         } finally {
             JapeSession.close(hnd);
         }
+    }
 
+    public static boolean fimDeSemana(LocalDate ld) {
+        DayOfWeek d = ld.getDayOfWeek();
+        return d == DayOfWeek.SATURDAY || d == DayOfWeek.SUNDAY;
     }
 
     public void verificaRegras(PersistenceEvent persistenceEvent) throws Exception {
@@ -139,11 +142,10 @@ public class Financeiro {
                 break;
 
             case "P":
-                int dias = Parceiro.maisDias(codParc).intValue();
-                if ((dias != 0) && atualiza) {
-                    //atualizaVencimento(nuFin, dtVenc.plusMonths(1).withDayOfMonth(dias));
+                int diaFixo = Parceiro.maisDias(codParc).intValue();
+                if ((diaFixo != 0) && atualiza) {
+                    //atualizaVencimento(nuFin, dtVenc.plusMonths(1).withDayOfMonth(diaFixo));
                     atualizaVencimento(nuFin, dtVenc.plusDays(1));
-                    if (true) throw new MGEModelException("DEURUIM");
                 }
                 break;
         }

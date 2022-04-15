@@ -38,10 +38,8 @@ public class RegraFrete implements Regra {
 
             DynamicVO topVO = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
 
-
             final boolean topVerificaFreteMinimo  = "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_FRETEMIN")));
             final boolean entregaAmostra = topVO.containsProperty("AD_ENTREGAAMOSTRA") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_ENTREGAAMOSTRA")));
-
 
             if (StringUtils.getNullAsEmpty(cabVO.asString("AD_FORMAENTREGA")).isEmpty() && ComercialUtils.ehVenda(cabVO.asString("TIPMOV")) && !entregaAmostra) throw new MGEModelException("Preenchimento da Forma de Entrega é obrigatório.");
 

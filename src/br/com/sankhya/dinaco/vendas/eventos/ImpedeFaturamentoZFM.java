@@ -1,7 +1,5 @@
 package br.com.sankhya.dinaco.vendas.eventos;
 
-import br.com.sankhya.checkout.helpers.ParametroHelper;
-import br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota;
 import br.com.sankhya.extensions.eventoprogramavel.EventoProgramavelJava;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.dao.JdbcWrapper;
@@ -9,22 +7,19 @@ import br.com.sankhya.jape.event.PersistenceEvent;
 import br.com.sankhya.jape.event.TransactionContext;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.modelcore.MGEModelException;
-import br.com.sankhya.modelcore.facades.avisossistema.OSMensagemAvisoCtx;
+import br.com.sankhya.modelcore.comercial.ComercialUtils;
+import br.com.sankhya.modelcore.metadata.DataDictionaryUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
-import br.com.sankhya.modelcore.util.ParameterUtils;
-import br.com.sankhya.pes.model.helpers.NotificacoesAppHelper;
-import com.sankhya.util.BigDecimalUtil;
+import com.sankhya.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.Collection;
 
-public class ImpedeFaturamentoCotacao implements EventoProgramavelJava {
+public class ImpedeFaturamentoZFM implements EventoProgramavelJava {
     @Override
     public void beforeInsert(PersistenceEvent persistenceEvent) throws Exception {
+
     }
-
-
 
     @Override
     public void beforeUpdate(PersistenceEvent persistenceEvent) throws Exception {
@@ -51,26 +46,31 @@ public class ImpedeFaturamentoCotacao implements EventoProgramavelJava {
 
             //Nota destino
             DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNota);
-            //final boolean ehPedido = cabVO.asString("TIPMOV").equalsIgnoreCase("P");
-            final boolean ehContaEOrdem = cabVO.asBigDecimalOrZero("CODTIPOPER").compareTo(BigDecimal.valueOf(1030)) == 0; // 1030 - Pedido de Venda - Conta e Ordem
+            final boolean ehZonaFrancaManaus = DataDictionaryUtils.campoExisteEmTabela("AD_ZFM", "TGFTOP") && "S".equals(cabVO.asDymamicVO("TipoOperacao").asString("AD_ZFM"));
 
-            // Nota de Origem
-            DynamicVO cabOrigVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNotaOrig);
-            final boolean ehCotacaoOrig = cabOrigVO.asBigDecimalOrZero("CODTIPOPER").compareTo(BigDecimal.valueOf(901)) == 0; // 901 - Cotação de Venda
-            final boolean temTerceirista = !BigDecimalUtil.isNullOrZero(cabOrigVO.asBigDecimalOrZero("CODPARCDEST"));
+            if (!ComercialUtils.ehCompra(cabVO.asString("TIPMOV"))) {
 
-            // Se TOP de faturamento não for 1030 - Pedido de Venda - Conta e Ordem, TOP origem for 901 - Cotação de Venda e Terceirista estiver preenchido
-            // Impede o faturamento
-            if (ehCotacaoOrig && !ehContaEOrdem && temTerceirista) {
-                throw new MGEModelException("Somente é possível faturar Cotação de Venda (901) com terceirista para Pedido de Venda - Compra e Ordem (1030).");
-            } else if (ehCotacaoOrig && ehContaEOrdem && !temTerceirista) {
-                throw new MGEModelException("Somente é possível faturar Cotação de Venda (901) para Pedido de Venda - Compra e Ordem (1030) com terceirista preenchido.");
+                // Nota de Origem
+                DynamicVO cabOrigVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNotaOrig);
+                final boolean parceiroTemSUFRAMA = !StringUtils.getNullAsEmpty(cabOrigVO.asDymamicVO("Parceiro").asDymamicVO("ComplementoParc").asString("CODSUFRAMA")).isEmpty();
+
+                // Se TOP de destino estiver marcada como Zona Franca de Manaus e o parceiro não tiver SUFRAMA
+                // Impede o faturamento
+                if (ehZonaFrancaManaus && !parceiroTemSUFRAMA) {
+                    throw new MGEModelException("Somente é possível faturar para esta TOP com parceiros da Zona Franca de Manaus.");
+                }
+                if (!ehZonaFrancaManaus && parceiroTemSUFRAMA) {
+                    throw new MGEModelException("Para parceiros da Zona Franca de Manaus só é possível faturar para TOPs deste tipo.");
+                }
+
+
             }
+
+
 
         } finally {
             jdbc.closeSession();
         }
-
 
 
     }
