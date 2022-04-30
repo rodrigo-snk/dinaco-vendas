@@ -1,7 +1,6 @@
 package br.com.sankhya.dinaco.vendas.regras;
 
 import br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota;
-import br.com.sankhya.dinaco.vendas.modelo.Financeiro;
 import br.com.sankhya.dinaco.vendas.modelo.Produto;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.vo.DynamicVO;
@@ -18,6 +17,8 @@ import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import static br.com.sankhya.dinaco.vendas.modelo.Financeiro.liberacaoLimite;
 
 
 public class RegraUltimoPreco implements Regra {
@@ -45,14 +46,14 @@ public class RegraUltimoPreco implements Regra {
 
         if (isConfirmandoNota) {
             DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();
-            final boolean validaUltimoPrecoVenda  = "S".equals(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_VALIDAULTPRE"));
+            final boolean validaPrecoAbaixo  = "S".equals(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_VALIDAULTPRE"));
 
-            if (validaUltimoPrecoVenda) {
+            if (validaPrecoAbaixo) {
                 Collection<DynamicVO> itensNotaVO = cabVO.asCollection("ItemNota");
 
                 Predicate<DynamicVO> verificaUltimoPreco = item -> {
                     try {
-                        return verificaUltimoPreco(item);
+                        return verificaUltimoPreco(item) || verificaPrecoTabela(item);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -76,8 +77,8 @@ public class RegraUltimoPreco implements Regra {
 
                 formataObservacaoLiberador(itensNotaVO, mensagem);
 
-                if (isPrecisaLiberacao(itensNotaVO)) {
-                    Financeiro.liberacaoLimite(contextoRegra,
+                if (precisaLiberacao(itensNotaVO)) {
+                    liberacaoLimite(contextoRegra,
                             codUsuarioLogado,
                             cabVO,
                             String.valueOf(mensagem),
@@ -178,26 +179,36 @@ public class RegraUltimoPreco implements Regra {
     }
 
     // Exige liberação da nota se algum dos itens estiver com o valor unitário abaixo do preço de tabela ou abaixo do último preço praticado
-    private boolean isPrecisaLiberacao(Collection<DynamicVO> itensNotaVO) {
-        return itensNotaVO.stream().anyMatch(item -> {
+    private boolean precisaLiberacao(Collection<DynamicVO> itensNotaVO) {
+        Predicate<DynamicVO> verificaPreco = item -> {
             try {
-                return (verificaPrecoTabela(item) /*|| verificaUltimoPreco(item)*/);
+                return verificaUltimoPreco(item) || verificaPrecoTabela(item);
             } catch (Exception e) {
                 e.printStackTrace();
             }
             return false;
-        });
+        };
+
+        return itensNotaVO.stream().anyMatch(verificaPreco);
+        /*return itensNotaVO.stream().anyMatch(item -> {
+            try {
+                return (verificaPrecoTabela(item) || verificaUltimoPreco(item));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return false;
+        });*/
     }
 
     private StringBuilder formataMensagemErro(Collection<DynamicVO> itens, StringBuilder mensagem) throws Exception {
         for (DynamicVO item:
                 itens) {
             if (verificaUltimoPreco(item) && StringUtils.getNullAsEmpty(item.asString("AD_OBSULTVLRMOE")).isEmpty()) {
-                mensagem.append(String.format("Preencha observação ult. vlr. moeda no item %d - %s (último preço de venda %.2f).\n", item.asInt("CODPROD"), Produto.getDescricao(item.asBigDecimalOrZero("CODPROD")), item.asBigDecimalOrZero("AD_ULTVLRUNITMOE")));
+                mensagem.append(String.format("Preencha observação últ. vlr. moeda no item %d - %s (último preço de venda %.2f).\n", item.asInt("CODPROD"), Produto.getDescricao(item.asBigDecimalOrZero("CODPROD")), item.asBigDecimalOrZero("AD_ULTVLRUNITMOE")));
             }
 
             if (verificaPrecoTabela(item) && StringUtils.getNullAsEmpty(item.asString("AD_OBSULTVLRMOE")).isEmpty()) {
-                mensagem.append(String.format("Preencha observação ult. vlr. moeda no item %d - %s (preço de tabela %.2f).\n", item.asInt("CODPROD"), Produto.getDescricao(item.asBigDecimalOrZero("CODPROD")), precoTabela(item, item.asDymamicVO("CabecalhoNota"))));
+                mensagem.append(String.format("Preencha observação últ. vlr. moeda no item %d - %s (preço de tabela %.2f).\n", item.asInt("CODPROD"), Produto.getDescricao(item.asBigDecimalOrZero("CODPROD")), precoTabela(item, item.asDymamicVO("CabecalhoNota"))));
             }
         }
         return mensagem;

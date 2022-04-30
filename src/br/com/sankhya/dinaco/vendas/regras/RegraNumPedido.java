@@ -7,9 +7,11 @@ import br.com.sankhya.modelcore.comercial.ContextoRegra;
 import br.com.sankhya.modelcore.comercial.Regra;
 import com.sankhya.util.StringUtils;
 
+import java.util.Collection;
+
 import static br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota.exigeOC;
 
-public class RegraNroOC implements Regra {
+public class RegraNumPedido implements Regra {
 
     final boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
 
@@ -25,9 +27,13 @@ public class RegraNroOC implements Regra {
         // Se OC na nota não estiver preenchido, impede confirmação da nota.
         if (isConfirmandoNota) {
             DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();
-            if (exigeOC(cabVO) && StringUtils.getNullAsEmpty(cabVO.asString("NUMPEDIDO2")).isEmpty()) {
-                throw new MGEModelException("Tipo de Operação e Parceiro exigem preenchimento da Ordem de Compra.");
+            Collection<DynamicVO> itensNota = cabVO.asCollection("ItemNota");
+            if (exigeOC(cabVO) && itensNota.stream().anyMatch(vo -> StringUtils.getNullAsEmpty(vo.asString("NUMPEDIDO2")).isEmpty())){
+                throw new MGEModelException("Tipo de Operação e Parceiro exigem preenchimento do Número Pedido para cada item.");
             }
+            /*if (exigeOC(cabVO) && StringUtils.getNullAsEmpty(cabVO.asString("NUMPEDIDO2")).isEmpty()) {
+                throw new MGEModelException("Tipo de Operação e Parceiro exigem preenchimento da Ordem de Compra.");
+            }*/
         }
     }
 

@@ -17,7 +17,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-public class ImpedeFaturamentoConsumidorFinal implements EventoProgramavelJava {
+public class ImpedeFaturamentoConsumidorFinalNaoContribuinte implements EventoProgramavelJava {
     @Override
     public void beforeInsert(PersistenceEvent persistenceEvent) throws Exception {
         JdbcWrapper jdbc = null;
@@ -38,7 +38,7 @@ public class ImpedeFaturamentoConsumidorFinal implements EventoProgramavelJava {
 
             // Nota de Origem
             DynamicVO cabOrigVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNotaOrig);
-            final boolean ehConsumidorFinal = "C".equals(StringUtils.getNullAsEmpty(cabOrigVO.asString("CLASSIFICMS")));
+            final boolean ehConsumidorFinalNaoContribuinte = "C".equals(StringUtils.getNullAsEmpty(cabOrigVO.asDymamicVO("Parceiro").asString("CLASSIFICMS")));
 
             if (!ComercialUtils.ehCompra(cabVO.asString("TIPMOV"))) {
 
@@ -49,20 +49,18 @@ public class ImpedeFaturamentoConsumidorFinal implements EventoProgramavelJava {
                 Collection<DynamicVO> topsRngVO = rngVO.asCollection("TopRegraNegocio");
                 topsRngVO.forEach(vo -> tops.add(vo.asBigDecimalOrZero("CODTIPOPER")));
 
-                // Se TOP de destino estiver na regra de negócio 7 — FATURAMENTO CONSUMIDOR FINAL e o Parceiro não for consumidor final
-                // Se o Parceiro for consumidor final e TOP de destino não estiver na regra de negócio 7 — FATURAMENTO CONSUMIDOR FINAL
                 // Impede o faturamento
+                // Se TOP de destino estiver na regra de negócio 7 — FATURAMENTO CONSUMIDOR FINAL NÃO CONTRIBUINTE e o Parceiro não for consumidor final não contribuinte
+                // Se o Parceiro for consumidor final e TOP de destino não estiver na regra de negócio 7 — FATURAMENTO CONSUMIDOR FINAL NÃO CONTRIBUINTE
 
-                if (regraAtiva && !ehConsumidorFinal && tops.contains(codTipOper)) {
+                if (regraAtiva && !ehConsumidorFinalNaoContribuinte && tops.contains(codTipOper)) {
                     throw new MGEModelException("Somente é possível faturar para esta TOP parceiros com classificação ICMS - Consumidor Final Não Contribuinte.");
                 }
-                if (regraAtiva && ehConsumidorFinal && !tops.contains(codTipOper)) {
-                    throw new MGEModelException("Somente é possível faturar para TOPs de consumidor final.");
+                if (regraAtiva && ehConsumidorFinalNaoContribuinte && !tops.contains(codTipOper)) {
+                    throw new MGEModelException("Somente é possível faturar para TOPs de consumidor final não contribuinte.");
                 }
 
             }
-
-
 
         } finally {
             jdbc.closeSession();

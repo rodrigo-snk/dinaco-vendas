@@ -34,7 +34,6 @@ public class ImpedeFaturamentoFinsdeExportacao implements EventoProgramavelJava 
             DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNota);
             BigDecimal codTipOper = cabVO.asBigDecimalOrZero("CODTIPOPER");
 
-
             // Nota de Origem
             DynamicVO cabOrigVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNotaOrig);
             final boolean ehFinsExportacao = "S".equals(StringUtils.getNullAsEmpty(cabOrigVO.asString("AD_FINSEXPORT")));

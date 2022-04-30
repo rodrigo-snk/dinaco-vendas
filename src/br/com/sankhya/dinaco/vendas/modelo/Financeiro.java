@@ -153,16 +153,15 @@ public class Financeiro {
 
     }
 
-    public static void liberacaoLimite(ContextoRegra contextoRegra, BigDecimal codUsuarioLogado, DynamicVO notaVO, String observacao, int evento) {
-        try {
-            LiberacaoSolicitada ls = new LiberacaoSolicitada(notaVO.asBigDecimalOrZero("NUNOTA"),"TGFCAB", evento, BigDecimal.ZERO);
-            ls.setCodCenCus(notaVO.asBigDecimalOrZero("CODCENCUS"));
+    public static void liberacaoLimite(ContextoRegra contextoRegra, BigDecimal codUsuarioLogado, DynamicVO cabVO, String observacao, int evento) throws Exception {
+            LiberacaoSolicitada ls = new LiberacaoSolicitada(cabVO.asBigDecimalOrZero("NUNOTA"),"TGFCAB", evento, BigDecimal.ZERO);
+            ls.setCodCenCus(cabVO.asBigDecimalOrZero("CODCENCUS"));
             ls.setSolicitante(codUsuarioLogado);
             ls.setLiberador(BigDecimal.ZERO);
             ls.setObsLiberador(observacao);
-            ls.setVlrAtual(notaVO.asBigDecimalOrZero("VLRNOTA"));
-            ls.setVlrTotal(notaVO.asBigDecimalOrZero("VLRNOTA"));
-            ls.setCodTipOper(notaVO.asBigDecimalOrZero("CODTIPOPER"));
+            ls.setVlrAtual(cabVO.asBigDecimalOrZero("VLRNOTA"));
+            ls.setVlrTotal(cabVO.asBigDecimalOrZero("VLRNOTA"));
+            ls.setCodTipOper(cabVO.asBigDecimalOrZero("CODTIPOPER"));
             ls.setVlrLimite(BigDecimal.ZERO);
             ls.setDhSolicitacao(TimeUtils.getNow());
 
@@ -170,7 +169,7 @@ public class Financeiro {
             boolean semSolicitacao = liberacaoLimiteVO == null;
 
             if (semSolicitacao) {
-                LiberacaoAlcadaHelper.validarLiberacoesPendentes(notaVO.asBigDecimalOrZero("NUNOTA"));
+                LiberacaoAlcadaHelper.validarLiberacoesPendentes(cabVO.asBigDecimalOrZero("NUNOTA"));
                 LiberacaoAlcadaHelper.processarLiberacao(ls);
                 contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
             } else {
@@ -179,10 +178,5 @@ public class Financeiro {
                     contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
                 }
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
     }
 }
