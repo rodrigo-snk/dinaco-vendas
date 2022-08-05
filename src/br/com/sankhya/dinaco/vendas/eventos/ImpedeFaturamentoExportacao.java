@@ -35,11 +35,9 @@ public class ImpedeFaturamentoExportacao implements EventoProgramavelJava {
     @Override
     public void afterInsert(PersistenceEvent persistenceEvent) throws Exception {
 
-        JdbcWrapper jdbc = null;
+        JapeSession.SessionHandle hnd = null;
         try {
-            JapeSession.open();
-            jdbc = EntityFacadeFactory.getDWFFacade().getJdbcWrapper();
-            jdbc.openSession();
+            hnd = JapeSession.open();
 
             DynamicVO varVO = (DynamicVO) persistenceEvent.getVo();
             BigDecimal nuNota = varVO.asBigDecimalOrZero("NUNOTA");
@@ -63,7 +61,7 @@ public class ImpedeFaturamentoExportacao implements EventoProgramavelJava {
             }
 
         } finally {
-            jdbc.closeSession();
+            JapeSession.close(hnd);
         }
 
 

@@ -1,16 +1,17 @@
 package br.com.sankhya.dinaco.vendas.teste;
 
+import br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota;
 import br.com.sankhya.dinaco.vendas.modelo.Financeiro;
 import br.com.sankhya.dinaco.vendas.modelo.Parceiro;
-import br.com.sankhya.modelcore.comercial.LimiteCreditoHelpper;
+import br.com.sankhya.modelcore.MGEModelException;
+import bsh.StringUtil;
+import com.sankhya.util.BigDecimalUtil;
 import com.sankhya.util.StringUtils;
 import com.sankhya.util.TimeUtils;
 import org.junit.jupiter.api.Assertions;
-import org.mockito.cglib.core.Local;
-import org.mockito.internal.verification.Times;
 
 import java.math.BigDecimal;
-import java.sql.Time;
+import java.math.MathContext;
 import java.sql.Timestamp;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -167,6 +168,86 @@ public class DebugTest {
         System.out.println(primeiroDiaMes);
         System.out.println(ultimoDiaMes);
         System.out.println("Ultimo dia do mês passado: " +ultimoDiaMesPassado);
+
+        String pkRegistro = "3_6697_3_10_0_P_AD_TGFEST";
+        System.out.println(pkRegistro);
+        pkRegistro = pkRegistro.replace("AD_TGFEST", "Estoque");
+        System.out.println(pkRegistro);
+
+        BigDecimal precoTabela = BigDecimal.TEN;
+
+        BigDecimal QUATROPORCENTO = BigDecimal.valueOf(-0.04);
+        BigDecimal SETEPORCENTO = BigDecimal.valueOf(-0.07);
+        BigDecimal DEZOITOPORCENTO = BigDecimal.valueOf(-0.18);
+
+        // Vlr. Venda 7% = (((Vlr. Venda 12%/1,03) * 0,7875) / 0,8375 ) * 1,03
+        BigDecimal expressaoCalculo = precoTabela.divide(BigDecimal.valueOf(1.03), MathContext.DECIMAL32).multiply(BigDecimal.valueOf(0.7875));
+        BigDecimal precoTabela7p = expressaoCalculo.divide(BigDecimal.valueOf(0.9075).add(QUATROPORCENTO), MathContext.DECIMAL32).multiply(BigDecimal.valueOf(1.03));
+        // Vlr. Venda 4% = (((Vlr. Venda 12%/1,03) * 0,7875) /  0,8675 ) * 1,03
+        BigDecimal precoTabela4p = expressaoCalculo.divide(BigDecimal.valueOf(0.9075).add(SETEPORCENTO), MathContext.DECIMAL32).multiply(BigDecimal.valueOf(1.03));
+        BigDecimal precoTabela18p = expressaoCalculo.divide(BigDecimal.valueOf(0.9075).add(DEZOITOPORCENTO), MathContext.DECIMAL32).multiply(BigDecimal.valueOf(1.03));
+
+
+        System.out.println(precoTabela7p);
+        System.out.println(precoTabela4p);
+        System.out.println(precoTabela18p);
+
+        System.out.println(CabecalhoNota.ehPedidoVenda("P"));
+        System.out.println(CabecalhoNota.ehPedidoVenda("V"));
+
+        System.out.println(StringUtils.getNullAsEmpty("").isEmpty());
+        System.out.println(StringUtils.getNullAsEmpty(" ").trim().isEmpty());
+
+        BigDecimal testeTab = BigDecimal.valueOf(16.523479);
+
+        System.out.println(BigDecimalUtil.getRounded(testeTab, 2));
+
+        System.out.println(StringUtils.isEmpty(null));
+
+        System.out.println("Envio da NF-e anskdasdajb".contains("Envio da NF-e"));
+
+
+
+
+        String assunto = "Envio da NF-e - N.Doc 000012398 - Série 1";
+
+        assunto = assunto.replace("Envio da NF-e -", "Envio da NF-e com produto perigoso -");
+
+        System.out.println(assunto);
+
+
+        BigDecimal qtdNeg = BigDecimal.valueOf(9.1);
+
+        BigDecimal estoque = BigDecimal.valueOf(20);
+
+        BigDecimal reservado = BigDecimal.valueOf(11.6);
+
+        BigDecimal disponivel = estoque.subtract(reservado);
+
+        final boolean naoTemEstoque = disponivel.subtract(qtdNeg).compareTo(BigDecimal.ZERO) < 0;
+
+        System.out.println("Não tem estoque disponível para este item neste local.\n Disponível: " + disponivel);
+
+
+        System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getNow(), TimeUtils.dataAdd(TimeUtils.getNow(),-1,5)));
+
+        System.out.println(String.format("Existe um lote com validade menor: %s. Quebra FEFO precisa estar marcado.", TimeUtils.formataDDMMYYYY(null)));
+
+        System.out.println("AGORA " +TimeUtils.getNow() + " TESTE DTFATUR SEGUNDOS: " + TimeUtils.dataAdd(TimeUtils.getNow(),1,13));
+
+        String chave = "3_810_312_27_0_P_Estoque";
+        String[] estoqueString = chave.split("_");
+
+        System.out.println("Produto: " +estoqueString[1]);
+        System.out.println("Controle: " +estoqueString[3]);
+
+
+
+        System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getNow(), null));
+
+        final boolean faturamentoFuturo = TimeUtils.compareOnlyDates(TimeUtils.getNow(), TimeUtils.getMonthEnd(TimeUtils.getNow())) < 0;
+
+
 
 
 

@@ -1,5 +1,6 @@
 package br.com.sankhya.dinaco.vendas.eventos;
 
+import br.com.sankhya.dinaco.vendas.modelo.ItemNota;
 import br.com.sankhya.extensions.eventoprogramavel.EventoProgramavelJava;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.dao.JdbcWrapper;
@@ -20,17 +21,24 @@ public class VerificaPTAX implements EventoProgramavelJava {
 
     @Override
     public void beforeInsert(PersistenceEvent persistenceEvent) throws Exception {
-        DynamicVO cabVO = (DynamicVO) persistenceEvent.getVo();
-        verificaPTAX(cabVO);
+        //DynamicVO cabVO = (DynamicVO) persistenceEvent.getVo();
+        //verificaPTAX(cabVO, false);
+        //ItemNota.atualizaValoresItens(cabVO);
+
     }
 
     @Override
     public void beforeUpdate(PersistenceEvent persistenceEvent) throws Exception {
+        final boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
+
         DynamicVO cabVO = (DynamicVO) persistenceEvent.getVo();
         final boolean isModifyingVlrMoeda = persistenceEvent.getModifingFields().isModifing("VLRMOEDA");
+        final boolean isModifyingDtFatur = persistenceEvent.getModifingFields().isModifing("DTFATUR");
         final boolean isModifyingParametrosPTAX = persistenceEvent.getModifingFields().isModifing("AD_PTAXFIXO") || persistenceEvent.getModifingFields().isModifing("AD_PTAXMEDIO");
-
-        if (isModifyingVlrMoeda || isModifyingParametrosPTAX) verificaPTAX(cabVO);
+        if (isModifyingDtFatur || isModifyingVlrMoeda || isModifyingParametrosPTAX) {
+            verificaPTAX(cabVO, isModifyingVlrMoeda);
+            ItemNota.atualizaValoresItens(cabVO);
+        }
     }
 
     @Override
@@ -40,6 +48,8 @@ public class VerificaPTAX implements EventoProgramavelJava {
 
     @Override
     public void afterInsert(PersistenceEvent persistenceEvent) throws Exception {
+
+
     }
 
     @Override

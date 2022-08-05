@@ -17,7 +17,7 @@ public class Telemarketing implements EventoProgramavelJava {
         DynamicVO relVO = (DynamicVO) persistenceEvent.getVo();
         final boolean situacaoResolvido = "N".equals(StringUtils.getNullAsEmpty(relVO.asString("PENDENTE")));
 
-        if (situacaoResolvido) throw new MGEModelException("NÃ£o Ã© possÃ­vel criar relatÃ³rio com situaÃ§Ã£o: Resolvido.");
+        if (situacaoResolvido) throw new MGEModelException("Não é possível criar relatório com situação: Resolvido.");
     }
 
     @Override
@@ -39,7 +39,7 @@ public class Telemarketing implements EventoProgramavelJava {
             StringBuilder mensagem = new StringBuilder();
 
             if (semParticipantes) mensagem.append("Adicione ao menos um participante.\n");
-            if (semApresentacoes) mensagem.append("Adicione ao menos uma apresentaÃ§Ã£o.\n");
+            if (semApresentacoes) mensagem.append("Adicione ao menos uma apresentação.\n");
             if (semAssuntosAbordados) mensagem.append("Adicione ao menos um assunto abordado.\n");
             if (semDepartamentosAbordados) mensagem.append("Adicione ao menos um departamento abordado.");
 

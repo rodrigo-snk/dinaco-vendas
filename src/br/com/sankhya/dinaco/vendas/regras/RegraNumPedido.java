@@ -9,7 +9,7 @@ import com.sankhya.util.StringUtils;
 
 import java.util.Collection;
 
-import static br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota.exigeOC;
+import static br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota.exigeNumPedido2;
 
 public class RegraNumPedido implements Regra {
 
@@ -23,16 +23,16 @@ public class RegraNumPedido implements Regra {
     @Override
     public void beforeUpdate(ContextoRegra contextoRegra) throws Exception {
 
-        // Na confirmaÃ§Ã£o da nota verifica se a TOP e Parceiro exigem OC.
-        // Se OC na nota nÃ£o estiver preenchido, impede confirmaÃ§Ã£o da nota.
+        // Na confirmação da nota verifica se a TOP e Parceiro exigem OC.
+        // Se OC na nota não estiver preenchido, impede confirmação da nota.
         if (isConfirmandoNota) {
             DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();
             Collection<DynamicVO> itensNota = cabVO.asCollection("ItemNota");
-            if (exigeOC(cabVO) && itensNota.stream().anyMatch(vo -> StringUtils.getNullAsEmpty(vo.asString("NUMPEDIDO2")).isEmpty())){
-                throw new MGEModelException("Tipo de OperaÃ§Ã£o e Parceiro exigem preenchimento do NÃºmero Pedido para cada item.");
+            if (exigeNumPedido2(cabVO) && itensNota.stream().anyMatch(vo -> StringUtils.getNullAsEmpty(vo.asString("NUMPEDIDO2")).isEmpty())){
+                throw new MGEModelException("Tipo de Operação e Parceiro exigem preenchimento do Número Pedido para cada item.");
             }
             /*if (exigeOC(cabVO) && StringUtils.getNullAsEmpty(cabVO.asString("NUMPEDIDO2")).isEmpty()) {
-                throw new MGEModelException("Tipo de OperaÃ§Ã£o e Parceiro exigem preenchimento da Ordem de Compra.");
+                throw new MGEModelException("Tipo de Operação e Parceiro exigem preenchimento da Ordem de Compra.");
             }*/
         }
     }

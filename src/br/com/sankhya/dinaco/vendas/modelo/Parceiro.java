@@ -11,6 +11,7 @@ import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
 import com.sankhya.model.entities.vo.ContatoVO;
 import com.sankhya.model.entities.vo.ContatoVOBasico;
+import com.sankhya.util.BigDecimalUtil;
 import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
@@ -26,8 +27,7 @@ public class Parceiro {
         JapeSession.SessionHandle hnd = null;
         try {
             hnd = JapeSession.open();
-            JapeWrapper parceiroDAO = JapeFactory.dao(DynamicEntityNames.PARCEIRO);
-            parceiroVO = parceiroDAO.findByPK(codParc);
+            parceiroVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.PARCEIRO, codParc);
         } catch (Exception e) {
             MGEModelException.throwMe(e);
         } finally {
@@ -36,12 +36,16 @@ public class Parceiro {
         return parceiroVO;
     }
 
-    public static String cadastraContato(DynamicVO parcVO, String nomeContato) throws Exception {
+
+    public static String cadastraContato(DynamicVO parcVO, String nomeContato, String telefone, String email) throws Exception {
         EntityFacade dwfFacade = EntityFacadeFactory.getDWFFacade();
         DynamicVO contatoVO = (DynamicVO) dwfFacade.getDefaultValueObjectInstance(DynamicEntityNames.CONTATO);
 
         contatoVO.setProperty("CODPARC", parcVO.asBigDecimal("CODPARC"));
         contatoVO.setProperty("NOMECONTATO", nomeContato);
+        contatoVO.setProperty("TELEFONE", telefone);
+        contatoVO.setProperty("EMAIL", email);
+
         contatoVO.setProperty("DTCAD", TimeUtils.getNow());
         contatoVO.setProperty("ATIVO", "S");
         dwfFacade.createEntity(DynamicEntityNames.CONTATO, (EntityVO) contatoVO);
@@ -54,12 +58,17 @@ public class Parceiro {
         return getParceiroByPK(codParc).asString("AD_RVENC_MS");
     }
 
+
     public static String tipoRegra(Object codParc) throws MGEModelException {
         return getParceiroByPK(codParc).asString("AD_RVENC_RECDESP");
     }
 
     public static int prazoVencimentoItens(Object codParc) throws MGEModelException {
         return getParceiroByPK(codParc).asBigDecimalOrZero("AD_PRAZOVENCITENS").intValue();
+    }
+
+    public static boolean temPtaxMedio(Object codParc) throws MGEModelException {
+        return "S".equals(getParceiroByPK(codParc).asString("AD_PTAXMEDIO"));
     }
 
     public static LinkedList<Object> getDias(Map<Object, Boolean> map) {
@@ -114,8 +123,15 @@ public class Parceiro {
     }
 
     public static BigDecimal getCodCenCus(Object codParc) throws MGEModelException {
-        return getParceiroByPK(codParc).asBigDecimalOrZero("AD_CODCENCUS");
+        return getParceiroByPK(codParc).asBigDecimalOrZero("CODCENCUS");
     }
+
+    public static BigDecimal getCodCenCusUnidadeNegocio(Object codParc) throws MGEModelException {
+        DynamicVO parcVO = getParceiroByPK(codParc);
+        if (BigDecimalUtil.isNullOrZero(parcVO.asBigDecimal("AD_CODUNNEG"))) return BigDecimal.ZERO;
+        else return parcVO.asDymamicVO("AD_UNNEG").asBigDecimalOrZero("CODCENCUS");
+    }
+
 
     public static BigDecimal getCodNat(Object codParc) throws MGEModelException {
         return getParceiroByPK(codParc).asBigDecimalOrZero("AD_CODNAT");

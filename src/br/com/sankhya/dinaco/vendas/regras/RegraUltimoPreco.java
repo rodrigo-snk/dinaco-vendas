@@ -62,13 +62,12 @@ public class RegraUltimoPreco implements Regra {
 
                 Predicate<DynamicVO> semObservacao = item -> StringUtils.getNullAsEmpty(item.asString("AD_OBSULTVLRMOE")).isEmpty();
 
-
                 Collection<DynamicVO> itens = itensNotaVO.stream()
                         .filter(verificaUltimoPreco)
                         .filter(semObservacao)
                         .collect(Collectors.toList());
 
-                // Se o campo observaÃ§Ã£o estiver vazio, apresenta mensagem de erro.
+                // Se o campo observação estiver vazio, apresenta mensagem de erro.
                 StringBuilder mensagem = new StringBuilder();
                 formataMensagemErro(itens, mensagem);
                 if (mensagem.length() > 0) {
@@ -123,16 +122,17 @@ public class RegraUltimoPreco implements Regra {
             final BigDecimal ultimoPrecoVendaNFe = CabecalhoNota.ultimoPrecoVendaNFe(itemNotaVO.asBigDecimalOrZero("CODPROD"), cabVO.asBigDecimalOrZero("CODPARC"));
             final boolean ultimoPrecoMaiorQuePrecodoItem = ultimoPrecoVendaNFe.compareTo(itemNotaVO.asBigDecimalOrZero("VLRUNITMOE")) > 0 && !BigDecimalUtil.isNullOrZero(ultimoPrecoVendaNFe);
 
-            BigDecimal valorVendaTabela = precoTabela(itemNotaVO, cabVO);
+            //BigDecimal valorVendaTabela = precoTabela(itemNotaVO, cabVO);
+            BigDecimal valorVendaTabela = BigDecimalUtil.getRounded(itemNotaVO.asBigDecimalOrZero("AD_VLRVENDATAB"), 2);
 
             final boolean valorTabelaMaiorQuePrecodoItem = valorVendaTabela.compareTo(itemNotaVO.asBigDecimalOrZero("VLRUNITMOE")) > 0 && !BigDecimalUtil.isNullOrZero(valorVendaTabela);
 
             if (validaUltimoPrecoVenda) {
                 if (ultimoPrecoMaiorQuePrecodoItem) {
-                    contextoRegra.getBarramentoRegra().addMensagem(String.format("Valor unitÃ¡rio moeda do %d - %s menor que o Ãºltimo preÃ§o de venda (%.2f).", produtoVO.asInt("CODPROD"), produtoVO.asString("DESCRPROD"), ultimoPrecoVendaNFe));
+                    contextoRegra.getBarramentoRegra().addMensagem(String.format("Valor unitário moeda do %s - %s menor que o último preço de venda (%.6f).", produtoVO.asString("REFERENCIA"), produtoVO.asString("DESCRPROD"), ultimoPrecoVendaNFe));
                 }
                 if (valorTabelaMaiorQuePrecodoItem) {
-                    contextoRegra.getBarramentoRegra().addMensagem(String.format("Valor unitÃ¡rio moeda do %d - %s menor que o preÃ§o de tabela (%.2f).", produtoVO.asInt("CODPROD"), produtoVO.asString("DESCRPROD"), valorVendaTabela));
+                    contextoRegra.getBarramentoRegra().addMensagem(String.format("Valor unitário moeda do %s - %s menor que o preço de tabela (%.6f).", produtoVO.asString("REFERENCIA"), produtoVO.asString("DESCRPROD"), valorVendaTabela));
                 }
             }
         } catch (Exception e) {
@@ -141,19 +141,7 @@ public class RegraUltimoPreco implements Regra {
 
     }
 
-    private BigDecimal precoTabela(DynamicVO itemVO, DynamicVO cabVO) throws Exception {
-        // Verifica ultimo preÃ§o de tabela
-        return ComercialUtils.obtemPreco(cabVO.asBigDecimalOrZero("CODEMP"),
-                cabVO.asBigDecimalOrZero("CODPARC"),
-                null,
-                null,
-                itemVO.asBigDecimalOrZero("CODPROD"),
-                itemVO.asBigDecimalOrZero("CODLOCALORIG"),
-                TimeUtils.getNow(),
-                null,
-                cabVO.asString("TIPMOV"),
-                null).getValorVenda();
-    }
+
 
     public boolean verificaUltimoPreco(DynamicVO itemVO) throws Exception {
 
@@ -170,15 +158,21 @@ public class RegraUltimoPreco implements Regra {
         DynamicVO cabVO = itemVO.asDymamicVO("CabecalhoNota");
         final boolean validaUltimoPrecoVenda  = "S".equals(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_VALIDAULTPRE"));
 
-        // Verifica ultimo preÃ§o de tabela
-        BigDecimal precoTabela = precoTabela(itemVO,cabVO);
+        // Verifica ultimo preço de tabela
+        BigDecimal precoTabela = BigDecimalUtil.getRounded(itemVO.asBigDecimalOrZero("AD_VLRVENDATAB"), 2);
+        //BigDecimal precoTabela = precoTabela(itemVO,cabVO); // PRECO TABELA EM REAIS
+
+        // Vlr. Venda 7% = (((Vlr. Venda 12%/1,03) * 0,7575) / 0,8375 ) * 1,03
+        //BigDecimal precoTabela7p = precoTabela.divide(BigDecimal.valueOf(1.03), MathContext.DECIMAL32).multiply(BigDecimal.valueOf(0.7875)).divide(BigDecimal.valueOf(0.8375), MathContext.DECIMAL32).multiply(BigDecimal.valueOf(1.03));
+        // Vlr. Venda 4% = (((Vlr. Venda 12%/1,03) * 0,7575) /  0,8675 ) * 1,03
+       // BigDecimal precoTabela4p = precoTabela.divide(BigDecimal.valueOf(1.03), MathContext.DECIMAL32).multiply(BigDecimal.valueOf(0.7875)).divide(BigDecimal.valueOf(0.8675), MathContext.DECIMAL32).multiply(BigDecimal.valueOf(1.03));
 
         final boolean valorTabelaMaiorQuePrecodoItem = precoTabela.compareTo(itemVO.asBigDecimalOrZero("VLRUNITMOE")) > 0 && !BigDecimalUtil.isNullOrZero(precoTabela);
 
         return validaUltimoPrecoVenda && valorTabelaMaiorQuePrecodoItem;
     }
 
-    // Exige liberaÃ§Ã£o da nota se algum dos itens estiver com o valor unitÃ¡rio abaixo do preÃ§o de tabela ou abaixo do Ãºltimo preÃ§o praticado
+    // Exige liberação da nota se algum dos itens estiver com o valor unitário abaixo do preço de tabela ou abaixo do último preço praticado
     private boolean precisaLiberacao(Collection<DynamicVO> itensNotaVO) {
         Predicate<DynamicVO> verificaPreco = item -> {
             try {
@@ -204,11 +198,11 @@ public class RegraUltimoPreco implements Regra {
         for (DynamicVO item:
                 itens) {
             if (verificaUltimoPreco(item) && StringUtils.getNullAsEmpty(item.asString("AD_OBSULTVLRMOE")).isEmpty()) {
-                mensagem.append(String.format("Preencha observaÃ§Ã£o Ãºlt. vlr. moeda no item %d - %s (Ãºltimo preÃ§o de venda %.2f).\n", item.asInt("CODPROD"), Produto.getDescricao(item.asBigDecimalOrZero("CODPROD")), item.asBigDecimalOrZero("AD_ULTVLRUNITMOE")));
+                mensagem.append(String.format("Preencha observação últ. vlr. moeda no item %s - %s (último preço de venda %.6f).\n", item.asString("REFERENCIA"), Produto.getDescricao(item.asBigDecimalOrZero("CODPROD")), item.asBigDecimalOrZero("AD_ULTVLRUNITMOE")));
             }
 
             if (verificaPrecoTabela(item) && StringUtils.getNullAsEmpty(item.asString("AD_OBSULTVLRMOE")).isEmpty()) {
-                mensagem.append(String.format("Preencha observaÃ§Ã£o Ãºlt. vlr. moeda no item %d - %s (preÃ§o de tabela %.2f).\n", item.asInt("CODPROD"), Produto.getDescricao(item.asBigDecimalOrZero("CODPROD")), precoTabela(item, item.asDymamicVO("CabecalhoNota"))));
+                mensagem.append(String.format("Preencha observação últ. vlr. moeda no item %s - %s (preço de tabela %.6f).\n",item.asString("REFERENCIA"), Produto.getDescricao(item.asBigDecimalOrZero("CODPROD")), item.asBigDecimalOrZero("AD_VLRVENDATAB")));
             }
         }
         return mensagem;
@@ -218,11 +212,11 @@ public class RegraUltimoPreco implements Regra {
         for (DynamicVO item:
                 itens) {
             if (verificaUltimoPreco(item)) {
-                mensagem.append(String.format("Ult. vlr. moeda no item %d - %s (Ãºlt. vlr. unit. moeda: %.2f / vlr. unit. moeda: %.2f ).\n", item.asInt("CODPROD"), Produto.getDescricao(item.asBigDecimalOrZero("CODPROD")), item.asBigDecimalOrZero("AD_ULTVLRUNITMOE"),  item.asBigDecimalOrZero("VLRUNITMOE")));
+                mensagem.append(String.format("Ult. vlr. moeda no item %s - %s (último preço de venda moeda: %.6f / vlr. unit. moeda: %.6f).\n", item.asString("REFERENCIA"), Produto.getDescricao(item.asBigDecimalOrZero("CODPROD")), item.asBigDecimalOrZero("AD_ULTVLRUNITMOE"),  item.asBigDecimalOrZero("VLRUNITMOE")));
             }
 
             if (verificaPrecoTabela(item) ) {
-                mensagem.append(String.format("Ãšlt. vlr. moeda no item %d - %s (preÃ§o de tabela %.2f).\n", item.asInt("CODPROD"), Produto.getDescricao(item.asBigDecimalOrZero("CODPROD")), precoTabela(item, item.asDymamicVO("CabecalhoNota"))));
+                mensagem.append(String.format("Últ. vlr. moeda no item %s - %s (preço de tabela: %.6f / vlr. unit. moeda: %.6f).\n", item.asString("REFERENCIA"), Produto.getDescricao(item.asBigDecimalOrZero("CODPROD")), item.asBigDecimalOrZero("AD_VLRVENDATAB"), item.asBigDecimalOrZero("VLRUNITMOE")));
             }
         }
         return mensagem;

@@ -14,10 +14,10 @@ BEGIN
      INNER JOIN TGFTOP TOP ON CAB.CODTIPOPER = TOP.CODTIPOPER AND CAB.DHTIPOPER = TOP.DHALTER
      WHERE ITE.NUNOTA = P_NUNOTA
      AND ITE.SEQUENCIA = P_SEQUENCIA;
-     --USOPROD = '4' (Demonstração)
-IF V_USOPROD = '4' THEN
+     --USOPROD = 'B' (Brinde)
+IF V_USOPROD = 'B' THEN
     P_SUCESSO := 'N';
-    P_MENSAGEM := 'Tipo Operação ' || V_CODTIPOPER || ' - ' || V_DESCROPER || ' não permite produtos usados como demonstração/amostra. Use um tipo de operação que permita amostras.';
+    P_MENSAGEM := 'Tipo Operação ' || V_CODTIPOPER || ' - ' || V_DESCROPER || ' não permite produtos usados como brinde/amostra. Use um tipo de operação que permita amostras.';
  ELSE
     P_SUCESSO := 'S';
 END IF;

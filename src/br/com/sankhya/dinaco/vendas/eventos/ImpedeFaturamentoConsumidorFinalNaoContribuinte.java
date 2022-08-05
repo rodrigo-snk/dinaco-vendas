@@ -20,17 +20,13 @@ import java.util.Set;
 public class ImpedeFaturamentoConsumidorFinalNaoContribuinte implements EventoProgramavelJava {
     @Override
     public void beforeInsert(PersistenceEvent persistenceEvent) throws Exception {
-        JdbcWrapper jdbc = null;
+        JapeSession.SessionHandle hnd = null;
         try {
-            JapeSession.open();
-            jdbc = EntityFacadeFactory.getDWFFacade().getJdbcWrapper();
-            jdbc.openSession();
+            hnd = JapeSession.open();
 
             DynamicVO varVO = (DynamicVO) persistenceEvent.getVo();
             BigDecimal nuNota = varVO.asBigDecimalOrZero("NUNOTA");
             BigDecimal nuNotaOrig = varVO.asBigDecimalOrZero("NUNOTAORIG");
-
-
 
             //Nota destino
             DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNota);
@@ -40,30 +36,31 @@ public class ImpedeFaturamentoConsumidorFinalNaoContribuinte implements EventoPr
             DynamicVO cabOrigVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNotaOrig);
             final boolean ehConsumidorFinalNaoContribuinte = "C".equals(StringUtils.getNullAsEmpty(cabOrigVO.asDymamicVO("Parceiro").asString("CLASSIFICMS")));
 
-            if (!ComercialUtils.ehCompra(cabVO.asString("TIPMOV"))) {
+            if (!ehCompraOuEntrada(cabVO.asString("TIPMOV"))) {
 
-                DynamicVO rngVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.REGRA_NEGOCIO, BigDecimal.valueOf(7)); // 7 â€” FATURAMENTO CONSUMIDOR FINAL
+                DynamicVO rngVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.REGRA_NEGOCIO, BigDecimal.valueOf(7)); // 7 ? FATURAMENTO CONSUMIDOR FINAL
                 final boolean regraAtiva = "S".equals(rngVO.asString("ATIVO"));
 
-                Set<BigDecimal> tops = new HashSet<>();
+                HashSet<BigDecimal> tops = new HashSet<>();
                 Collection<DynamicVO> topsRngVO = rngVO.asCollection("TopRegraNegocio");
-                topsRngVO.forEach(vo -> tops.add(vo.asBigDecimalOrZero("CODTIPOPER")));
+
+                topsRngVO.forEach(vo -> tops.add(vo.asBigDecimal("CODTIPOPER")));
 
                 // Impede o faturamento
-                // Se TOP de destino estiver na regra de negÃ³cio 7 â€” FATURAMENTO CONSUMIDOR FINAL NÃƒO CONTRIBUINTE e o Parceiro nÃ£o for consumidor final nÃ£o contribuinte
-                // Se o Parceiro for consumidor final e TOP de destino nÃ£o estiver na regra de negÃ³cio 7 â€” FATURAMENTO CONSUMIDOR FINAL NÃƒO CONTRIBUINTE
+                // Se TOP de destino estiver na regra de negócio 7 ? FATURAMENTO CONSUMIDOR FINAL NÃO CONTRIBUINTE e o Parceiro não for consumidor final não contribuinte
+                // Se o Parceiro for consumidor final e TOP de destino não estiver na regra de negócio 7 ? FATURAMENTO CONSUMIDOR FINAL NÃO CONTRIBUINTE
 
                 if (regraAtiva && !ehConsumidorFinalNaoContribuinte && tops.contains(codTipOper)) {
-                    throw new MGEModelException("Somente Ã© possÃ­vel faturar para esta TOP parceiros com classificaÃ§Ã£o ICMS - Consumidor Final NÃ£o Contribuinte.");
+                    throw new MGEModelException("Somente é possível faturar para esta TOP parceiros com classificação ICMS - Consumidor Final Não Contribuinte.");
                 }
                 if (regraAtiva && ehConsumidorFinalNaoContribuinte && !tops.contains(codTipOper)) {
-                    throw new MGEModelException("Somente Ã© possÃ­vel faturar para TOPs de consumidor final nÃ£o contribuinte.");
+                    throw new MGEModelException("Somente é possível faturar para TOPs de consumidor final não contribuinte.");
                 }
 
             }
 
         } finally {
-            jdbc.closeSession();
+            JapeSession.close(hnd);
         }
 
     }
@@ -83,8 +80,7 @@ public class ImpedeFaturamentoConsumidorFinalNaoContribuinte implements EventoPr
 
     }
 
-    @Override
-    public void afterUpdate(PersistenceEvent persistenceEvent) throws Exception {
+    @Override public void afterUpdate(PersistenceEvent persistenceEvent) throws Exception {
 
     }
 
@@ -96,5 +92,9 @@ public class ImpedeFaturamentoConsumidorFinalNaoContribuinte implements EventoPr
     @Override
     public void beforeCommit(TransactionContext transactionContext) throws Exception {
 
+    }
+
+    private boolean ehCompraOuEntrada(String tipMov) {
+        return "O-C-E-D-N-1".indexOf(tipMov) > -1;
     }
 }

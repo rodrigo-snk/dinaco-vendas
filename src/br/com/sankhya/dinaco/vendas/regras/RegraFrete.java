@@ -10,6 +10,7 @@ import br.com.sankhya.modelcore.comercial.ContextoRegra;
 import br.com.sankhya.modelcore.comercial.LiberacaoAlcadaHelper;
 import br.com.sankhya.modelcore.comercial.Regra;
 import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
+import br.com.sankhya.modelcore.metadata.DataDictionaryUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
 import com.sankhya.model.entities.vo.EmpresaVO;
@@ -22,6 +23,9 @@ import java.math.BigDecimal;
 import static br.com.sankhya.dinaco.vendas.modelo.Financeiro.liberacaoLimite;
 
 public class RegraFrete implements Regra {
+    final boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
+    final BigDecimal codUsuarioLogado = AuthenticationInfo.getCurrent().getUserID();
+
     @Override
     public void beforeInsert(ContextoRegra contextoRegra) throws Exception {
 
@@ -29,9 +33,6 @@ public class RegraFrete implements Regra {
 
     @Override
     public void beforeUpdate(ContextoRegra contextoRegra) throws Exception {
-        final boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
-        final BigDecimal codUsuarioLogado = AuthenticationInfo.getCurrent().getUserID();
-
 
         if (isConfirmandoNota) {
             DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();
@@ -40,8 +41,11 @@ public class RegraFrete implements Regra {
 
             final boolean topVerificaFreteMinimo  = "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_FRETEMIN")));
             final boolean entregaAmostra = topVO.containsProperty("AD_ENTREGAAMOSTRA") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_ENTREGAAMOSTRA")));
+            final boolean ignoraFormaEntrega = DataDictionaryUtils.campoExisteEmTabela("AD_IGNORAFORMAENTREGA", "TGFTOP") && "S".equalsIgnoreCase(StringUtils.getNullAsEmpty(topVO.asString("AD_IGNORAFORMAENTREGA")));
 
-            if (StringUtils.getNullAsEmpty(cabVO.asString("AD_FORMAENTREGA")).isEmpty() && ComercialUtils.ehVenda(cabVO.asString("TIPMOV")) && !entregaAmostra) throw new MGEModelException("Preenchimento da Forma de Entrega Ã© obrigatÃ³rio.");
+
+            if (StringUtils.getNullAsEmpty(cabVO.asString("AD_FORMAENTREGA")).isEmpty() && ComercialUtils.ehVenda(cabVO.asString("TIPMOV")) && !entregaAmostra  && !ignoraFormaEntrega)
+                throw new MGEModelException("Preenchimento da Forma de Entrega é obrigatório.");
 
             final boolean semFrete = "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("CIF_FOB")));
 
@@ -56,15 +60,14 @@ public class RegraFrete implements Regra {
                 final boolean notaMenorQueMinimoFrete = vlrNota.compareTo(minimoFrete) < 0;
                 final boolean freteMenorQueFreteMinimo = vlrFreteNota.compareTo(vlrFrete) < 0;
 
-                //Verifica se valor da nota e valor do frete sÃ£o menores que o valor mÃ­nimo para frete e valor do frete(fixado) nas preferÃªncias da Empresa
+                //Verifica se valor da nota e valor do frete são menores que o valor mínimo para frete e valor do frete(fixado) nas preferências da Empresa
                 if (notaMenorQueMinimoFrete && freteMenorQueFreteMinimo) {
-                    //Se observaÃ§Ã£o frete estiver vazia, exige preenchimento.
-                    // Caso contrÃ¡rio, cria evento de liberaÃ§Ã£o da nota
+                    //Se observação frete estiver vazia, exige preenchimento.
+                    // Caso contrário, cria evento de liberação da nota
                     if (observacaoFrete.isEmpty()) {
-                        throw new MGEModelException("Valor da nota menor que "+BigDecimalUtil.formatCurrency(minimoFrete, 2)+", o valor do frete precisa ser de no mÃ­nimo "+BigDecimalUtil.formatCurrency(vlrFrete, 2)+". Ajuste o valor do frete ou preencha ObservaÃ§Ã£o Frete para enviar liberaÃ§Ã£o para o Financeiro.");
-                    } else {
-                        liberacaoLimite(contextoRegra, codUsuarioLogado, cabVO, observacaoFrete, 1003);
+                        throw new MGEModelException("Valor da nota menor que "+BigDecimalUtil.formatCurrency(minimoFrete, 2)+", o valor do frete precisa ser de no mínimo "+BigDecimalUtil.formatCurrency(vlrFrete, 2)+". Ajuste o valor do frete ou preencha Observação Frete para enviar liberação para o Financeiro.");
                     }
+                    liberacaoLimite(contextoRegra, codUsuarioLogado, cabVO, observacaoFrete, 1003);
                 } else {
                     LiberacaoAlcadaHelper.apagaSolicitacoEvento(1003, cabVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
                 }

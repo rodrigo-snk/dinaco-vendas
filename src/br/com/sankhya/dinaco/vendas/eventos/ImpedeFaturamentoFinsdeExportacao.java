@@ -11,6 +11,7 @@ import br.com.sankhya.modelcore.metadata.DataDictionaryUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
 import com.sankhya.util.StringUtils;
+import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
 import java.util.Collection;
@@ -20,11 +21,9 @@ import java.util.Set;
 public class ImpedeFaturamentoFinsdeExportacao implements EventoProgramavelJava {
     @Override
     public void beforeInsert(PersistenceEvent persistenceEvent) throws Exception {
-        JdbcWrapper jdbc = null;
+        JapeSession.SessionHandle hnd = null;
         try {
-            JapeSession.open();
-            jdbc = EntityFacadeFactory.getDWFFacade().getJdbcWrapper();
-            jdbc.openSession();
+           hnd = JapeSession.open();
 
             DynamicVO varVO = (DynamicVO) persistenceEvent.getVo();
             BigDecimal nuNota = varVO.asBigDecimalOrZero("NUNOTA");
@@ -38,26 +37,26 @@ public class ImpedeFaturamentoFinsdeExportacao implements EventoProgramavelJava 
             DynamicVO cabOrigVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNotaOrig);
             final boolean ehFinsExportacao = "S".equals(StringUtils.getNullAsEmpty(cabOrigVO.asString("AD_FINSEXPORT")));
 
-            DynamicVO rngVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.REGRA_NEGOCIO, BigDecimal.valueOf(6)); // REGRA DE NEG√ìCIO FINS DE EXPORTA√á√ÉO
+            DynamicVO rngVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.REGRA_NEGOCIO, BigDecimal.valueOf(6)); // REGRA DE NEG”CIO FINS DE EXPORTA«√O
             final boolean regraAtiva = "S".equals(rngVO.asString("ATIVO"));
 
-            Set<BigDecimal> tops = new HashSet<>();
+            HashSet<BigDecimal> tops = new HashSet<>();
             Collection<DynamicVO> topsRngVO = rngVO.asCollection("TopRegraNegocio");
-            topsRngVO.forEach(vo -> tops.add(vo.asBigDecimalOrZero("CODTIPOPER")));
+            topsRngVO.forEach(vo -> tops.add(vo.asBigDecimal("CODTIPOPER")));
 
-            // Se TOP de destino estiver na regra de neg√≥cio 6 ‚Äî FINS DE EXPORTA√á√ÉO e no cabe√ßalho n√£o estiver marcado o flag Fins de Exporta√ß√£o
-            // Se no cabe√ßalho estiver marcado o flag Fins de Exporta√ß√£o e TOP de destino n√£o estiver na regra de neg√≥cio 6 ‚Äî FINS DE EXPORTA√á√ÉO
+            // Se TOP de destino estiver na regra de negÛcio 6 ? FINS DE EXPORTA«√O e no cabeÁalho n„o estiver marcado o flag Fins de ExportaÁ„o
+            // Se no cabeÁalho estiver marcado o flag Fins de ExportaÁ„o e TOP de destino n„o estiver na regra de negÛcio 6 ? FINS DE EXPORTA«√O
             // Impede o faturamento
 
             if (regraAtiva && !ehFinsExportacao && tops.contains(codTipOper)) {
-                throw new MGEModelException("Somente √© poss√≠vel faturar para esta TOP com fins de exporta√ß√£o.");
+                throw new MGEModelException("Somente È possÌvel faturar para esta TOP com fins de exportaÁ„o.");
             }
             if (regraAtiva && ehFinsExportacao && !tops.contains(codTipOper)) {
-                throw new MGEModelException("Somente √© poss√≠vel faturar para TOPs com fins de exporta√ß√£o.");
+                throw new MGEModelException("Somente È possÌvel faturar para TOPs com fins de exportaÁ„o.");
             }
 
         } finally {
-            jdbc.closeSession();
+            JapeSession.close(hnd);
         }
 
 

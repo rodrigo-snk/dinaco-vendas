@@ -22,14 +22,13 @@ public class VerificaCamposProspect implements EventoProgramavelJava {
 
             StringBuilder mensagem = new StringBuilder();
 
-            mensagem.append("Seguintes campos sÃ£o obrigatÃ³rios quando parceiro nÃ£o Ã© prospect:\n");
+            mensagem.append("Seguintes campos são obrigatórios quando parceiro não é prospect:\n");
 
             for (String campo: camposObrigatorios) {
-
-                if (parcVO.containsProperty(campo) && parcVO.getProperty(campo) == null) mensagem.append(campo).append("\n");
+                if (DataDictionaryUtils.campoExisteEmTabela(campo, "TGFPAR") && parcVO.getProperty(campo) == null) mensagem.append(campo).append("\n");
             }
 
-            if (mensagem.length() > 65) throw new MGEModelException(mensagem.toString());
+            if (mensagem.length() > 66) throw new MGEModelException(mensagem.toString());
         }
 
     }
@@ -47,14 +46,13 @@ public class VerificaCamposProspect implements EventoProgramavelJava {
 
             StringBuilder mensagem = new StringBuilder();
 
-            mensagem.append("Seguintes campos sÃ£o obrigatÃ³rios quando prospect vira parceiro:\n");
+            mensagem.append("Seguintes campos são obrigatórios quando prospect vira parceiro:\n");
 
             for (String campo: camposObrigatorios) {
-
                 if (DataDictionaryUtils.campoExisteEmTabela(campo, "TGFPAR") && parcVO.getProperty(campo) == null) mensagem.append(campo).append("\n");
             }
 
-            if (mensagem.length() > 65) throw new MGEModelException(mensagem.toString());
+            if (mensagem.length() > 66) throw new MGEModelException(mensagem.toString());
         }
 
 

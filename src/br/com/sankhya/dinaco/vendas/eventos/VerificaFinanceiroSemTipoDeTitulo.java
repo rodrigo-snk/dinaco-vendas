@@ -20,7 +20,6 @@ import static br.com.sankhya.dinaco.vendas.modelo.Financeiro.getFinanceirosByNun
 
 public class VerificaFinanceiroSemTipoDeTitulo implements EventoProgramavelJava {
 
-    final boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
 
     @Override
     public void beforeInsert(PersistenceEvent persistenceEvent) throws Exception {
@@ -29,6 +28,8 @@ public class VerificaFinanceiroSemTipoDeTitulo implements EventoProgramavelJava 
 
     @Override
     public void beforeUpdate(PersistenceEvent persistenceEvent) throws Exception {
+        final boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
+
 
         if (isConfirmandoNota) {
             DynamicVO cabVO = (DynamicVO) persistenceEvent.getVo();

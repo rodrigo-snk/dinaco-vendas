@@ -20,7 +20,6 @@ import java.util.Set;
 public class RegraAereo implements Regra {
 
     private final BigDecimal nuRng = BigDecimal.valueOf(5); // REGRA DE NEGOCIO AEREO
-    final boolean alterandoIncluindoItem = JapeSession.getPropertyAsBoolean(AtributosRegras.INC_UPD_ITEM_CENTRAL, false);
 
     @Override
     public void beforeInsert(ContextoRegra contextoRegra) throws Exception {
@@ -64,7 +63,7 @@ public class RegraAereo implements Regra {
 
         BigDecimal codTipOper  = itemVO.asDymamicVO("CabecalhoNota").asBigDecimalOrZero("CODTIPOPER");
         DynamicVO localVO = itemVO.asDymamicVO("LocalFinanceiro");
-        final boolean localAereo = localVO.containsProperty("AD_AEREO") && "S".equals(localVO.asString("AD_AEREO"));
+        final boolean localAereo = localVO.containsProperty("AD_AEREO") && localVO != null && "S".equals(localVO.asString("AD_AEREO"));
 
         DynamicVO rngVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.REGRA_NEGOCIO, nuRng);
         final boolean ativo = "S".equals(rngVO.asString("ATIVO"));
@@ -73,7 +72,7 @@ public class RegraAereo implements Regra {
         topsRngVO.forEach(vo -> tops.add(vo.asBigDecimalOrZero("CODTIPOPER")));
 
         if (ativo && localAereo &&tops.contains(codTipOper)) {
-            return "Item est√° no local a√©reo. Verifique o pre√ßo de venda.";
+            return "Item est· em local aÈreo. Verifique o preÁo de venda.";
         }
 
         return "";

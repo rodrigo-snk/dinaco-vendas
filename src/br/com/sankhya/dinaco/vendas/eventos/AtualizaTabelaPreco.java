@@ -9,6 +9,10 @@ import com.sankhya.util.BigDecimalUtil;
 
 import static br.com.sankhya.dinaco.vendas.modelo.Produto.atualizaPrecoTabela;
 
+/**
+ * Este evento atualiza a tabela de preços (Excecao - TGFEXC) quando um novo produto é cadastrado e os campos LC do Produto (AD_LCPROD), % Margem Mínima (AD_MARGEMINIMA) e  % Margem Máxima (AD_MARGEMAXIMA) são preenchidos;
+ * ou na atualização de pelo menos um desses 3 campos ou atualização da Moeda origem e p/ preço.
+ */
 public class AtualizaTabelaPreco implements EventoProgramavelJava {
     @Override
     public void beforeInsert(PersistenceEvent persistenceEvent) throws Exception {
@@ -29,13 +33,7 @@ public class AtualizaTabelaPreco implements EventoProgramavelJava {
     public void afterInsert(PersistenceEvent persistenceEvent) throws Exception {
 
         DynamicVO prodVO = (DynamicVO) persistenceEvent.getVo();
-
-        final boolean camposPrecosPreenchidos = !BigDecimalUtil.isNullOrZero(prodVO.asBigDecimal("AD_LCPROD")) && !BigDecimalUtil.isNullOrZero(prodVO.asBigDecimal("AD_MARGEMAXIMA")) && !BigDecimalUtil.isNullOrZero(prodVO.asBigDecimal("AD_MARGEMINIMA"));
-
-        if (camposPrecosPreenchidos) {
-            atualizaPrecoTabela(prodVO);
-        }
-
+        atualizaPrecoTabela(prodVO);
     }
 
     @Override

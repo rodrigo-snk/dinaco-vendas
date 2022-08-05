@@ -1,32 +1,43 @@
 package br.com.sankhya.dinaco.vendas.modelo;
 
-import br.com.sankhya.dwf.controller.util.DynamicUtil;
+import br.com.sankhya.cotacao.model.services.CotacaoHelper;
+import br.com.sankhya.dinaco.vendas.acoes.ValidaCotacao;
 import br.com.sankhya.jape.EntityFacade;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.dao.JdbcWrapper;
 import br.com.sankhya.jape.sql.NativeSql;
 import br.com.sankhya.jape.util.FinderWrapper;
+import br.com.sankhya.jape.util.JapeSessionContext;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.jape.wrapper.JapeFactory;
+import br.com.sankhya.mgecomercial.model.centrais.cac.CACSP;
+import br.com.sankhya.mgecomercial.model.centrais.cac.CACSPBean;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.auth.AuthenticationInfo;
 import br.com.sankhya.modelcore.comercial.*;
 import br.com.sankhya.modelcore.comercial.centrais.CACHelper;
+import br.com.sankhya.modelcore.comercial.impostos.ImpostosHelpper;
 import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
+import br.com.sankhya.modelcore.metadata.DataDictionaryUtils;
+import br.com.sankhya.modelcore.util.CentralFinanceirosUtil;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
+import br.com.sankhya.modelcore.util.SPBeanUtils;
+import br.com.sankhya.util.troubleshooting.SKError;
+import br.com.sankhya.util.troubleshooting.TSLevel;
+import br.com.sankhya.ws.BusinessException;
+import br.com.sankhya.ws.ServiceContext;
 import com.sankhya.util.BigDecimalUtil;
+import com.sankhya.util.JdbcUtils;
 import com.sankhya.util.StringUtils;
 import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.Optional;
-
-import static br.com.sankhya.modelcore.comercial.ComercialUtils.ehCompra;
-import static br.com.sankhya.modelcore.comercial.ComercialUtils.ehVenda;
 
 public class CabecalhoNota {
 
@@ -49,10 +60,12 @@ public class CabecalhoNota {
         return notasVO;
     }
 
-    public static boolean ehPedidoOuVenda(String tipMov) {
-        return "P-V".contains(tipMov);
+    public static boolean ehPedidoVenda(String tipMov) {
+        return "P".contains(tipMov);
     }
-
+    public static boolean ehPedidoCompraVenda(String tipMov) {
+        return "P-O".contains(tipMov);
+    }
 
     public static DynamicVO buscaNotaPelaPK(BigDecimal nuNota) {
         JapeSession.SessionHandle hnd = null;
@@ -219,46 +232,78 @@ public class CabecalhoNota {
                     cabVO.setProperty("AD_REDESPACHO", "N");
                     break;
             }
+            // Preenche transportadora com TRANSAL SC (7790) se não houver transportadora preenchida
+            if ("C".equals(cabVO.asString("CIF_FOB")) && BigDecimalUtil.isNullOrZero(cabVO.asBigDecimal("CODPARCTRANSP")))
+                cabVO.setProperty("CODPARCTRANSP", BigDecimal.valueOf(7790)); // TRANSAL SC
         }
     }
 
-    public static void verificaCRNaturezaDoParceiro(DynamicVO cabVO) throws MGEModelException {
+    public static void verificaNaturezaDoParceiro(DynamicVO cabVO) throws MGEModelException {
         final String tipMov = cabVO.asString("TIPMOV");
-        final BigDecimal codCenCusParceiro = Parceiro.getCodCenCus(cabVO.getProperty("CODPARC"));
-        final BigDecimal codNatParceiro = Parceiro.getCodNat(cabVO.getProperty("CODPARC"));
+
+        // Preeenche com Natureza do Parceiro (TGFPAR.AD_CODNAT)
+        // Se TIPMOV in ('V')
+        if (ehPedidoVenda(tipMov)) {
+            final BigDecimal codNatParceiro = Parceiro.getCodNat(cabVO.getProperty("CODPARC"));
+            if (!BigDecimalUtil.isNullOrZero(codNatParceiro) && BigDecimalUtil.isNullOrZero(cabVO.asBigDecimalOrZero("CODNAT"))) cabVO.setProperty("CODNAT", codNatParceiro);;
+        }
+    }
+
+    public static void verificaCRDoParceiro(DynamicVO cabVO) throws MGEModelException {
+        final String tipMov = cabVO.asString("TIPMOV");
 
         // Preeenche com Centro de Custo do Parceiro (TGFPAR.AD_CODCENCUS)
-        // Se TIPMOV in ('O','C','E','P','V', 'D')
-        if ((ehCompra(tipMov) || ehVenda(tipMov))) {
-            if (!BigDecimalUtil.isNullOrZero(codCenCusParceiro)) cabVO.setProperty("CODCENCUS", codCenCusParceiro);
-            if (!BigDecimalUtil.isNullOrZero(codNatParceiro)) cabVO.setProperty("CODNAT", codNatParceiro);;
+        // Se TIPMOV in ('V')
+        if (ehPedidoVenda(tipMov)) {
+            final BigDecimal codCenCusParceiro = Parceiro.getCodCenCusUnidadeNegocio(cabVO.getProperty("CODPARC"));
+            if (!BigDecimalUtil.isNullOrZero(codCenCusParceiro) && BigDecimalUtil.isNullOrZero(cabVO.asBigDecimalOrZero("CODCENCUS"))) cabVO.setProperty("CODCENCUS", codCenCusParceiro);
         }
     }
 
     /**
-     *  Verifica se frete diferente de FOB ou Sem Frete e se Parceiro Transportadora nÃ£o estÃ¡ preenchido
+     *  Verifica se frete diferente de FOB ou Sem Frete e se Parceiro Transportadora não está preenchido
      */
-    public static void verificaTransportadoraObrigatoria(DynamicVO cabVO) throws Exception {
+    public static String verificaTransportadoraObrigatoria(DynamicVO cabVO) throws Exception {
+        DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
+        final boolean topIgnoraFormaEntrega = DataDictionaryUtils.campoExisteEmTabela("AD_IGNORAFORMAENTREGA", "TGFTOP") && "S".equalsIgnoreCase(StringUtils.getNullAsEmpty(topVO.asString("AD_IGNORAFORMAENTREGA")));
+        final boolean topObrigaTransportadora = DataDictionaryUtils.campoExisteEmTabela("AD_OBRIGATRANSP", "TGFTOP") && "S".equalsIgnoreCase(StringUtils.getNullAsEmpty(topVO.asString("AD_OBRIGATRANSP")));
         final String cifFob = StringUtils.getNullAsEmpty(cabVO.asString("CIF_FOB"));
-        final BigDecimal codParcTransp = cabVO.asBigDecimalOrZero("CODPARCTRANSP");
+        final boolean semTransportadora = BigDecimalUtil.isNullOrZero(cabVO.asBigDecimalOrZero("CODPARCTRANSP"));
         final boolean naoPrecisaTransportadora = "S".equalsIgnoreCase(cifFob) || "F".equalsIgnoreCase(cifFob);
 
-        if (!naoPrecisaTransportadora && BigDecimalUtil.isNullOrZero(codParcTransp)){
-            //throw new MGEModelException("Transportadora obrigatÃ³ria, Forma Entrega: " +cabVO.asString("AD_FORMAENTREGA")+ ", CIF/FOB: " +cabVO.asString("CIF_FOB")+ ", Transportadora: " +codParcTransp);
-            throw new MGEModelException("Transportadora obrigatÃ³ria para a forma de entrega selecionada. Verifique na aba Transporte.");
+        if (!topIgnoraFormaEntrega && topObrigaTransportadora && !naoPrecisaTransportadora && semTransportadora){
+            //throw new MGEModelException("Transportadora obrigatória, Forma Entrega: " +cabVO.asString("AD_FORMAENTREGA")+ ", CIF/FOB: " +cabVO.asString("CIF_FOB")+ ", Transportadora: " +codParcTransp);
+            return "Parceiro Transportadora obrigatório para a forma de entrega selecionada.\n";
+
         }
+        return "";
+
     }
-    public static boolean exigeOC(DynamicVO cabVO) throws Exception {
+
+    public static String verificaRedespacho(DynamicVO cabVO) throws Exception {
+        DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
+        final boolean ignoraFormaEntrega = DataDictionaryUtils.campoExisteEmTabela("AD_IGNORAFORMAENTREGA", "TGFTOP") && "S".equalsIgnoreCase(StringUtils.getNullAsEmpty(topVO.asString("AD_IGNORAFORMAENTREGA")));
+        final boolean isRedespacho =  DataDictionaryUtils.campoExisteEmTabela("AD_REDESPACHO", "TGFCAB") && "S".equalsIgnoreCase(StringUtils.getNullAsEmpty(cabVO.asString("AD_REDESPACHO")));
+        final boolean semRedespacho =  BigDecimalUtil.isNullOrZero(cabVO.asBigDecimalOrZero("CODPARCREDESPACHO"));
+
+        if (!ignoraFormaEntrega && isRedespacho && semRedespacho) {
+            return "Redespacho (Recebedor) é obrigatório para a forma de entrega selecionada.\n";
+        }
+
+        return "";
+    }
+
+    public static boolean exigeNumPedido2(DynamicVO cabVO) throws Exception {
         return "S".equals(StringUtils.getNullAsEmpty(Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC")).asString("AD_EXIGEOC")))
                 && "S".equals(StringUtils.getNullAsEmpty(TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER")).asString("AD_EXIGEOC")));
 
     }
 
     public static boolean negociacaoDiferenteDaSugerida(ContextoRegra contextoRegra, DynamicVO cabVO) throws Exception {
-        BigDecimal codTipVenda = cabVO.asBigDecimal("CODTIPVENDA"); // VERIFICAR QUANDO AO ALTERAR O TIPNEG O CABEÃ‡ALHO
+        BigDecimal codTipVenda = cabVO.asBigDecimal("CODTIPVENDA"); // VERIFICAR QUANDO AO ALTERAR O TIPNEG O CABEÇALHO
         DynamicVO topVO = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
         final boolean validaSugestao = topVO.containsProperty("AD_VALIDATIPNEG") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_VALIDATIPNEG")));
-        final boolean ehVenda = CabecalhoNota.ehPedidoOuVenda(topVO.asString("TIPMOV"));
+        final boolean ehVenda = CabecalhoNota.ehPedidoVenda(topVO.asString("TIPMOV"));
         final boolean ehCompra = ComercialUtils.ehCompra(topVO.asString("TIPMOV"));
 
         DynamicVO complementoParcVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.COMPLEMENTO_PARCEIRO, cabVO.asBigDecimal("CODPARC"));
@@ -267,13 +312,13 @@ public class CabecalhoNota {
 
         if (validaSugestao && ehVenda && !BigDecimalUtil.isNullOrZero(sugestaoSaida)) {
             if (codTipVenda.compareTo(sugestaoSaida) != 0) {
-                contextoRegra.getBarramentoRegra().addMensagem("Tipo de NegociaÃ§Ã£o diferente da sugerida para o parceiro. Necessita liberaÃ§Ã£o na confirmaÃ§Ã£o da nota.");
+                contextoRegra.getBarramentoRegra().addMensagem("Tipo de Negociação diferente da sugerida para o parceiro. Necessita liberação na confirmação da nota.");
                 return true;
             }
         }
         if (validaSugestao && ehCompra && !BigDecimalUtil.isNullOrZero(sugestaoEntrada)) {
             if (codTipVenda.compareTo(sugestaoEntrada) != 0) {
-                contextoRegra.getBarramentoRegra().addMensagem("Tipo de NegociaÃ§Ã£o diferente da sugerida para o parceiro. Necessita liberaÃ§Ã£o na confirmaÃ§Ã£o da nota.");
+                contextoRegra.getBarramentoRegra().addMensagem("Tipo de Negociação diferente da sugerida para o parceiro. Necessita liberação na confirmação da nota.");
                 return true;
             }
         }
@@ -284,7 +329,7 @@ public class CabecalhoNota {
         BigDecimal codTipVenda = cabVO.asBigDecimal("CODTIPVENDA");
         DynamicVO topVO = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
         final boolean validaSugestao = topVO.containsProperty("AD_VALIDATIPNEG") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_VALIDATIPNEG")));
-        final boolean ehVenda = CabecalhoNota.ehPedidoOuVenda(topVO.asString("TIPMOV"));
+        final boolean ehVenda = CabecalhoNota.ehPedidoVenda(topVO.asString("TIPMOV"));
         final boolean ehCompra = ComercialUtils.ehCompra(topVO.asString("TIPMOV"));
 
         DynamicVO complementoParcVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.COMPLEMENTO_PARCEIRO, cabVO.asBigDecimal("CODPARC"));
@@ -292,17 +337,16 @@ public class CabecalhoNota {
         BigDecimal sugestaoSaida = complementoParcVO.asBigDecimalOrZero("SUGTIPNEGSAID");
 
         if (validaSugestao && ehVenda && !BigDecimalUtil.isNullOrZero(sugestaoSaida)) {
-            if (codTipVenda.compareTo(sugestaoSaida) != 0) {
-                return true;
-            }
+            return codTipVenda.compareTo(sugestaoSaida) != 0;
         }
+
         if (validaSugestao && ehCompra && !BigDecimalUtil.isNullOrZero(sugestaoEntrada)) {
             return codTipVenda.compareTo(sugestaoEntrada) != 0;
         }
         return false;
     }
 
-    private static BigDecimal getCotacaoDiaAnterior(BigDecimal codMoeda, Timestamp hoje) throws Exception {
+    public static BigDecimal getCotacaoDiaAnterior(BigDecimal codMoeda, Timestamp hoje) throws Exception {
         if (BigDecimalUtil.isNullOrZero(codMoeda)) return BigDecimal.ZERO;
         final Timestamp ontem = TimeUtils.dataAdd(hoje,-1, 5);
         Collection<DynamicVO> cotVO = EntityFacadeFactory.getDWFFacade().findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.COTACAO_MOEDA, "this.CODMOEDA = ? and this.DTMOV = ?", new Object[] {codMoeda, TimeUtils.clearTime(ontem)}));
@@ -335,23 +379,34 @@ public class CabecalhoNota {
         return getCotacaoMediaPeriodo(codMoeda, primeiroDiaMesPassado, ultimoDiaMesPassado);
     }
 
-    public static void verificaPTAX(DynamicVO cabVO) throws Exception {
+    public static void verificaPTAX(DynamicVO cabVO, Boolean alterandoVlrMoeda) throws Exception {
 
         if (!BigDecimalUtil.isNullOrZero(cabVO.asBigDecimal("CODMOEDA"))) {
             DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
             DynamicVO moedaVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO("Moeda", cabVO.asBigDecimal("CODMOEDA"));
 
             final boolean moedaTemPtaxMedio = moedaVO.asDymamicVO("Moeda_AD001") != null && moedaVO.containsProperty("AD_PTAXMEDIO") && "S".equals(StringUtils.getNullAsEmpty(moedaVO.asDymamicVO("Moeda_AD001").asString("AD_PTAXMEDIO")));
-            final boolean ptaxDiaAnterior = topVO.containsProperty("AD_PTAXDIAANT") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_PTAXDIAANT")));
+            final boolean topPtaxDiaAnterior = topVO.containsProperty("AD_PTAXDIAANT") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_PTAXDIAANT")));
             final boolean ptaxFixo = cabVO.containsProperty("AD_PTAXFIXO") && "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_PTAXFIXO")));
-            final boolean ptaxMedio = cabVO.containsProperty("AD_PTAXMEDIO") && "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_PTAXMEDIO")));
+            final boolean ptaxMedio = cabVO.containsProperty("AD_PTAXMEDIO") && "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_PTAXMEDIO"))) && Parceiro.temPtaxMedio(cabVO.asBigDecimalOrZero("CODPARC"));
+            final boolean faturamentoFuturo = TimeUtils.compareOnlyDates(TimeUtils.getNow(), cabVO.asTimestamp("DTFATUR")) < 0;
+            Timestamp dataReferencia = faturamentoFuturo ? TimeUtils.getNow() : cabVO.asTimestamp("DTFATUR");
+            final boolean mesmaCotacao = cabVO.asBigDecimalOrZero("VLRMOEDA").compareTo(getCotacaoDiaAnterior(cabVO.asBigDecimal("CODMOEDA"), dataReferencia)) == 0;
 
-            if (ptaxDiaAnterior && !ptaxFixo) cabVO.setProperty("VLRMOEDA", getCotacaoDiaAnterior(cabVO.asBigDecimal("CODMOEDA"), TimeUtils.getNow()));
+
+            if (topPtaxDiaAnterior && alterandoVlrMoeda && !ptaxFixo && !mesmaCotacao) {
+                throw (BusinessException) SKError.registry(TSLevel.ERROR, "DINACO_REGRAS", new BusinessException(StringUtils.htmlScape("Não é permitido alterar Vlr. Moeda sem marcar PTAX Fixo.")));
+            }
+
+            if (topPtaxDiaAnterior && !ptaxFixo) {
+                cabVO.setProperty("VLRMOEDA", getCotacaoDiaAnterior(cabVO.asBigDecimal("CODMOEDA"), dataReferencia));
+            }
 
             if (ptaxMedio) {
-                if (!moedaTemPtaxMedio) throw new MGEModelException("Moeda nÃ£o tem PTAX mÃ©dio. Verificar rotina Valores de Moeda.");
-                cabVO.setProperty("VLRMOEDA", getCotacaoDiaAnterior(moedaVO.asBigDecimal("AD_CODMOEDAMEDIO"), TimeUtils.getNow()));
+                if (!moedaTemPtaxMedio) throw new MGEModelException("Moeda não tem PTAX médio. Verifique a rotina Valores de Moeda.");
+                cabVO.setProperty("VLRMOEDA", getCotacaoDiaAnterior(moedaVO.asBigDecimal("AD_CODMOEDAMEDIO"), dataReferencia));
             }
+
         }
 
     }
@@ -361,4 +416,96 @@ public class CabecalhoNota {
         barramentoConfirmacao.setValidarSilencioso(true);
         ConfirmacaoNotaHelper.confirmarNota(nuNota, barramentoConfirmacao);
     }
+
+    public static void recalculaNota(BigDecimal nuNota) throws Exception {
+        ImpostosHelpper impostosHelper = new ImpostosHelpper();
+        impostosHelper.calcularImpostos(nuNota);
+        impostosHelper.totalizarNota(nuNota);
+
+        final CentralFinanceiro centralFinanceiro = new CentralFinanceiro();
+        centralFinanceiro.inicializaNota(nuNota);
+        centralFinanceiro.refazerFinanceiro();
+    }
+
+    public static BigDecimal getEmpresa(BigDecimal nuNota) throws MGEModelException {
+        JdbcWrapper jdbc = null;
+        NativeSql sql = null;
+        ResultSet rset = null;
+        JapeSession.SessionHandle hnd = null;
+        BigDecimal codEmp = BigDecimal.ZERO;
+
+        try {
+            hnd = JapeSession.open();
+            hnd.setFindersMaxRows(-1);
+            EntityFacade entity = EntityFacadeFactory.getDWFFacade();
+            jdbc = entity.getJdbcWrapper();
+            jdbc.openSession();
+
+            sql = new NativeSql(jdbc);
+
+            sql.appendSql("SELECT CODEMP FROM TGFCAB WHERE NUNOTA = :NUNOTA");
+            sql.setNamedParameter("NUNOTA", nuNota);
+            rset = sql.executeQuery();
+
+            if (rset.next()) {
+                codEmp = rset.getBigDecimal("NUNOTA");
+            }
+
+        } catch (Exception e) {
+            MGEModelException.throwMe(e);
+        } finally {
+            JdbcUtils.closeResultSet(rset);
+            NativeSql.releaseResources(sql);
+            JdbcWrapper.closeSession(jdbc);
+            JapeSession.close(hnd);
+        }
+
+        return codEmp;
+    }
+
+    public static boolean temProdutoPerigoso(BigDecimal nuNota) throws MGEModelException {
+
+        JdbcWrapper jdbc = null;
+        NativeSql sql = null;
+        ResultSet rset = null;
+        JapeSession.SessionHandle hnd = null;
+        BigDecimal codEmp = BigDecimal.ZERO;
+
+        try {
+            hnd = JapeSession.open();
+            hnd.setFindersMaxRows(-1);
+            EntityFacade entity = EntityFacadeFactory.getDWFFacade();
+            jdbc = entity.getJdbcWrapper();
+            jdbc.openSession();
+
+            sql = new NativeSql(jdbc);
+
+            sql.appendSql("select count(*) PRODPERIGO\n" +
+                    "FROM TGFCAB cab\n" +
+                    "JOIN TGFITE ite ON ite.NUNOTA = cab.NUNOTA\n" +
+                    "JOIN TGFPRO pro ON ite.CODPROD = pro.CODPROD\n" +
+                    "WHERE pro.AD_PROPERIGO = 'S'\n"+
+                    "AND cab.NUNOTA = :NUNOTA");
+            sql.setNamedParameter("NUNOTA", nuNota);
+            rset = sql.executeQuery();
+
+            if (rset.next()) {
+                int produtosPerigosos = rset.getInt("PRODPERIGO");
+                return produtosPerigosos > 0;
+            }
+
+        } catch (Exception e) {
+            MGEModelException.throwMe(e);
+        } finally {
+            JdbcUtils.closeResultSet(rset);
+            NativeSql.releaseResources(sql);
+            JdbcWrapper.closeSession(jdbc);
+            JapeSession.close(hnd);
+        }
+
+        return false;
+
+    }
+
+
 }

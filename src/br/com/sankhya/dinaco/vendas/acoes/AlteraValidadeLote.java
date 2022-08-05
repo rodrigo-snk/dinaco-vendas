@@ -17,14 +17,13 @@ import com.sankhya.util.StringUtils;
 import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
-import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 
 import static br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota.confirmaNota;
 
-public class AlteraDatasFabVal implements AcaoRotinaJava {
+public class AlteraValidadeLote implements AcaoRotinaJava {
     @Override
     public void doAction(ContextoAcao contextoAcao) throws Exception {
         EntityFacade dwfFacade = EntityFacadeFactory.getDWFFacade();
@@ -35,7 +34,7 @@ public class AlteraDatasFabVal implements AcaoRotinaJava {
         //Timestamp dtFabricacao = (Timestamp) contextoAcao.getParam("DTFABRICACAO");
         Timestamp dtVal = (Timestamp) contextoAcao.getParam("DTVAL");
 
-        if (dtVal == null) contextoAcao.mostraErro("Para proceder com a aÃ§Ã£o Ã© necessÃ¡rio preencher ao menos um dos parÃ¢metros.");
+        if (dtVal == null) contextoAcao.mostraErro("Para proceder com a ação é necessário preencher ao menos um dos parâmetros.");
 
         for (Registro linha: linhas) {
             BigDecimal codEmp = (BigDecimal) linha.getCampo("CODEMP");
@@ -49,17 +48,20 @@ public class AlteraDatasFabVal implements AcaoRotinaJava {
 
             final boolean temReserva = estVO.asBigDecimal("RESERVADO").compareTo(BigDecimal.ZERO) > 0;
             final boolean naoEhEstoqueProprio = "T".equals(estVO.asString("TIPO")) || ("P".equals(estVO.asString("TIPO")) && !BigDecimalUtil.isNullOrZero(estVO.asBigDecimal("CODPARC")));
+            final boolean loteRevalidado = "S".equals(StringUtils.getNullAsEmpty(estVO.asString("AD_REVALIDADO")));
 
-            if (naoEhEstoqueProprio) contextoAcao.mostraErro("NÃ£o Ã© possÃ­vel alterar data de validade de produto em estoque de terceiros.");
-            if (temReserva) contextoAcao.mostraErro("NÃ£o Ã© possÃ­vel alterar data de validade de produto reservado.");
+            // Verificação de revalidação removida em 03-08-2022 a pedido do Luiz Noronha
+            //if (loteRevalidado) contextoAcao.mostraErro("Lote já foi revalidado.");
+            if (naoEhEstoqueProprio) contextoAcao.mostraErro("Não é possível alterar data de validade de produto em estoque de terceiros.");
+            if (temReserva) contextoAcao.mostraErro("Não é possível alterar data de validade de produto reservado.");
 
-            if (contextoAcao.confirmarSimNao(String.format("Lote %s", controle), String.format("Confirma alteraÃ§Ã£o data de validade de %s para %s?", TimeUtils.formataDDMMYYYY(estVO.asTimestamp("DTVAL")), TimeUtils.formataDDMMYYYY(dtVal)), 1)) {
+            if (contextoAcao.confirmarSimNao(String.format("Lote %s", controle), String.format("Confirma alteração data de validade de %s para %s?", TimeUtils.formataDDMMYYYY(estVO.asTimestamp("DTVAL")), TimeUtils.formataDDMMYYYY(dtVal)), 1)) {
 
                 ProdutoVO prodVO = (ProdutoVO) dwfFacade.findEntityByPrimaryKeyAsVO(DynamicEntityNames.PRODUTO, codProd, ProdutoVO.class);
                 DynamicVO empFinVO = (DynamicVO) dwfFacade.findEntityByPrimaryKeyAsVO(DynamicEntityNames.EMPRESA_FINANCEIRO, estVO.asBigDecimal("CODEMP"));
 
-                CabecalhoNotaVO cabSaidaVO = (CabecalhoNotaVO) empFinVO.asDymamicVO("CabecalhoNotaModeloSaida").wrapInterface(CabecalhoNotaVO.class);
-                CabecalhoNotaVO cabEntradaVO = (CabecalhoNotaVO) empFinVO.asDymamicVO("CabecalhoNotaModelo").wrapInterface(CabecalhoNotaVO.class);
+                CabecalhoNotaVO cabSaidaVO = (CabecalhoNotaVO) empFinVO.asDymamicVO("CabecalhoNota_AD001").wrapInterface(CabecalhoNotaVO.class);
+                CabecalhoNotaVO cabEntradaVO = (CabecalhoNotaVO) empFinVO.asDymamicVO("CabecalhoNota").wrapInterface(CabecalhoNotaVO.class);
                 cabSaidaVO.setNUNOTA(null);
                 cabSaidaVO.setDTNEG(TimeUtils.getNow());
                 cabSaidaVO.setDTENTSAI(TimeUtils.getNow());
@@ -71,17 +73,29 @@ public class AlteraDatasFabVal implements AcaoRotinaJava {
                 cabEntradaVO.setDTENTSAI(TimeUtils.getNow());
                 cabEntradaVO.setDTMOV(TimeUtils.getNow());
                 cabEntradaVO.setDTFATUR(TimeUtils.getNow());
-                //contextoAcao.confirmar("AtenÃ§Ã£o", estVO.toString() ,1);
+                //contextoAcao.confirmar("Atenção", estVO.toString() ,1);
 
                 criaNotaDeSaida(dwfFacade, estVO, prodVO, cabSaidaVO);
 
                 criaNotaDeEntrada(dwfFacade, dtVal, estVO, prodVO, cabEntradaVO);
 
-                contextoAcao.setMensagemRetorno(String.format("AlteraÃ§Ã£o feita com sucesso! Nota de saÃ­da: %s | Nota de entrada: %s", cabSaidaVO.getNUNOTA(), cabEntradaVO.getNUNOTA()));
+                criaLigacaoVar(dwfFacade, estVO, cabSaidaVO, cabEntradaVO);
+
+                contextoAcao.setMensagemRetorno(String.format("Alteração feita com sucesso! Nota de saída: %s | Nota de entrada: %s", cabSaidaVO.getNUNOTA(), cabEntradaVO.getNUNOTA()));
 
             }
         }
 
+    }
+
+    private void criaLigacaoVar(EntityFacade dwfFacade, DynamicVO estVO, CabecalhoNotaVO cabSaidaVO, CabecalhoNotaVO cabEntradaVO) throws Exception {
+        DynamicVO varVO = (DynamicVO) dwfFacade.getDefaultValueObjectInstance(DynamicEntityNames.COMPRA_VENDA_VARIOS_PEDIDO);
+        varVO.setProperty("NUNOTA", cabEntradaVO.getNUNOTA());
+        varVO.setProperty("NUNOTAORIG", cabSaidaVO.getNUNOTA());
+        varVO.setProperty("SEQUENCIA", BigDecimal.ONE);
+        varVO.setProperty("SEQUENCIAORIG", BigDecimal.ONE);
+        varVO.setProperty("QTDATENDIDA", estVO.asBigDecimal("ESTOQUE"));
+        dwfFacade.createEntity(DynamicEntityNames.COMPRA_VENDA_VARIOS_PEDIDO, (EntityVO) varVO);
     }
 
     private BigDecimal criaNotaDeSaida(EntityFacade dwfFacade, DynamicVO estVO, ProdutoVO prodVO, CabecalhoNotaVO cabSaidaVO) throws Exception {
@@ -100,7 +114,7 @@ public class AlteraDatasFabVal implements AcaoRotinaJava {
         itemVO.setATUALESTOQUE(BigDecimal.ZERO);
         itemVO.setRESERVA("N");
         itens.add(itemVO);
-        //contextoAcao.confirmar("AtenÃ§Ã£o","Antes de salvar os itens na nota." ,2);
+        //contextoAcao.confirmar("Atenção","Antes de salvar os itens na nota." ,2);
         ItemNotaHelpper.saveItensNota(itens, cabSaidaVO);
         confirmaNota(cabSaidaVO.getNUNOTA());
 
@@ -130,6 +144,8 @@ public class AlteraDatasFabVal implements AcaoRotinaJava {
         DynamicVO estNovoVO = (DynamicVO) dwfFacade.findEntityByPrimaryKeyAsVO(DynamicEntityNames.ESTOQUE, new Object[] {estVO.asBigDecimal("CODEMP"), estVO.asBigDecimal("CODPROD"), estVO.asBigDecimal("CODLOCAL"), estVO.asString("CONTROLE"), estVO.asBigDecimal("CODPARC"), estVO.asString("TIPO")});
         //if (dtFabricacao != null) estNovoVO.setProperty("DTFABRICACAO", estVO.asTimestamp("DTFABRICACAO"));
         if (dtVal != null) estNovoVO.setProperty("DTVAL", dtVal);
+        if (estNovoVO.containsProperty("AD_REVALIDADO")) estNovoVO.setProperty("AD_REVALIDADO", "S");
+        if (estNovoVO.containsProperty("AD_CONTREVAL")) estNovoVO.setProperty("AD_CONTREVAL", estNovoVO.asBigDecimalOrZero("AD_CONTREVAL").add(BigDecimal.ONE));
         dwfFacade.saveEntity(DynamicEntityNames.ESTOQUE, (EntityVO) estNovoVO);
 
         confirmaNota(cabEntradaVO.getNUNOTA());

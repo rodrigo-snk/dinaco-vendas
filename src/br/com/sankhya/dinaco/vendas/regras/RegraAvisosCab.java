@@ -21,17 +21,17 @@ public class RegraAvisosCab implements Regra {
         jdbcWrapper.openSession();
 
         if (isItemNota) {
-            //USOPROD = '4' (DemonstraÃ§Ã£o)
+            //USOPROD = 'B' (Brinde)
             DynamicVO itemNotaVO = contextoRegra.getPrePersistEntityState().getNewVO();
-            final boolean isDemonstracao = itemNotaVO.asString("USOPROD").equalsIgnoreCase("4");
+            final boolean isBrinde = itemNotaVO.asString("USOPROD").equalsIgnoreCase("B");
             final BigDecimal nuNota = itemNotaVO.asBigDecimalOrZero("NUNOTA");
 
             DynamicVO cabecalhoNotaVO = (DynamicVO) dwf.findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNota);
             final BigDecimal codTipOper = (BigDecimal) cabecalhoNotaVO.getProperty("CODTIPOPER");
 
-            if (isDemonstracao) {
+            if (isBrinde) {
                 if (BigDecimal.valueOf(1001).equals(codTipOper)) {
-                    contextoRegra.getBarramentoRegra().addMensagem("VocÃª adicionou um produto com uso demonstraÃ§Ã£o. CODTIPOPER: "+codTipOper);
+                    contextoRegra.getBarramentoRegra().addMensagem("Você adicionou um produto com uso demonstração. CODTIPOPER: "+codTipOper);
                 }
             }
             jdbcWrapper.closeSession();
@@ -60,7 +60,7 @@ public class RegraAvisosCab implements Regra {
             Collection<DynamicVO> finsVO = EntityFacadeFactory.getDWFFacade().findByDynamicFinder(finder);
 
             if (finsVO.size() > 0) {
-                contextoRegra.getBarramentoRegra().addMensagem(Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC")).asString("NOMEPARC") + " estÃ¡ inadimplente.");
+                contextoRegra.getBarramentoRegra().addMensagem(Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC")).asString("NOMEPARC") + " está inadimplente.");
             }
         }
 

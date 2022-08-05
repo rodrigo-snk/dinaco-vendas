@@ -7,6 +7,8 @@ import br.com.sankhya.jape.util.FinderWrapper;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.jape.wrapper.JapeFactory;
 import br.com.sankhya.jape.wrapper.JapeWrapper;
+import br.com.sankhya.mgeprod.model.helper.ApontamentoHelper;
+import br.com.sankhya.mgeprod.model.helper.OperacaoProducaoHelper;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.comercial.ContextoRegra;
 import br.com.sankhya.modelcore.comercial.LiberacaoAlcadaHelper;
@@ -14,6 +16,7 @@ import br.com.sankhya.modelcore.comercial.LiberacaoSolicitada;
 import br.com.sankhya.modelcore.dwfdata.vo.tsi.LiberacaoLimiteVO;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
+import com.sankhya.util.StringUtils;
 import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
@@ -151,14 +154,17 @@ public class Financeiro {
         }
 
 
+
+
     }
+
 
     public static void liberacaoLimite(ContextoRegra contextoRegra, BigDecimal codUsuarioLogado, DynamicVO cabVO, String observacao, int evento) throws Exception {
             LiberacaoSolicitada ls = new LiberacaoSolicitada(cabVO.asBigDecimalOrZero("NUNOTA"),"TGFCAB", evento, BigDecimal.ZERO);
             ls.setCodCenCus(cabVO.asBigDecimalOrZero("CODCENCUS"));
             ls.setSolicitante(codUsuarioLogado);
             ls.setLiberador(BigDecimal.ZERO);
-            ls.setObsLiberador(observacao);
+            ls.setObsLiberador(StringUtils.limitSize(observacao,255));
             ls.setVlrAtual(cabVO.asBigDecimalOrZero("VLRNOTA"));
             ls.setVlrTotal(cabVO.asBigDecimalOrZero("VLRNOTA"));
             ls.setCodTipOper(cabVO.asBigDecimalOrZero("CODTIPOPER"));

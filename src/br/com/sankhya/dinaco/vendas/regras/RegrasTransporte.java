@@ -15,6 +15,9 @@ import com.sankhya.util.StringUtils;
  * Regra substituída pelo evento RegraTransporte
  */
 public class RegrasTransporte implements Regra {
+
+    final boolean isConfirmandoNota = JapeSession.getPropertyAsBoolean("CabecalhoNota.confirmando.nota", false);
+
     @Override
     public void beforeInsert(ContextoRegra contextoRegra) throws Exception {
 
@@ -45,6 +48,19 @@ public class RegrasTransporte implements Regra {
             }
 
         }*/
+
+        if (isConfirmandoNota) {
+            DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();
+            String mensagem = "";
+
+            mensagem = mensagem.concat(CabecalhoNota.verificaRedespacho(cabVO));
+            // Verifica se TOP obriga transportadora (AD_OBRIGATRANSP = 'S') e Parceiro Transportadora não preenchido
+            mensagem = mensagem.concat(CabecalhoNota.verificaTransportadoraObrigatoria(cabVO));
+            if (!mensagem.isEmpty()) {
+                mensagem = mensagem.concat("\nVerifique a aba Transporte.");
+                throw new MGEModelException(mensagem);
+            }
+        }
     }
 
     @Override

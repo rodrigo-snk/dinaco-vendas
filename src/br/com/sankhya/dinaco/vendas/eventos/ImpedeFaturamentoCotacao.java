@@ -38,12 +38,10 @@ public class ImpedeFaturamentoCotacao implements EventoProgramavelJava {
 
     @Override
     public void afterInsert(PersistenceEvent persistenceEvent) throws Exception {
+        JapeSession.SessionHandle hnd = null;
 
-        JdbcWrapper jdbc = null;
         try {
-            JapeSession.open();
-            jdbc = EntityFacadeFactory.getDWFFacade().getJdbcWrapper();
-            jdbc.openSession();
+            hnd = JapeSession.open();
 
             DynamicVO varVO = (DynamicVO) persistenceEvent.getVo();
             BigDecimal nuNota = varVO.asBigDecimalOrZero("NUNOTA");
@@ -56,19 +54,19 @@ public class ImpedeFaturamentoCotacao implements EventoProgramavelJava {
 
             // Nota de Origem
             DynamicVO cabOrigVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNotaOrig);
-            final boolean ehCotacaoOrig = cabOrigVO.asBigDecimalOrZero("CODTIPOPER").compareTo(BigDecimal.valueOf(901)) == 0; // 901 - Cota√ß√£o de Venda
+            final boolean ehCotacaoOrig = cabOrigVO.asBigDecimalOrZero("CODTIPOPER").compareTo(BigDecimal.valueOf(901)) == 0; // 901 - CotaÁ„o de Venda
             final boolean temTerceirista = !BigDecimalUtil.isNullOrZero(cabOrigVO.asBigDecimalOrZero("CODPARCDEST"));
 
-            // Se TOP de faturamento n√£o for 1030 - Pedido de Venda - Conta e Ordem, TOP origem for 901 - Cota√ß√£o de Venda e Terceirista estiver preenchido
+            // Se TOP de faturamento n„o for 1030 - Pedido de Venda - Conta e Ordem, TOP origem for 901 - CotaÁ„o de Venda e Terceirista estiver preenchido
             // Impede o faturamento
             if (ehCotacaoOrig && !ehContaEOrdem && temTerceirista) {
-                throw new MGEModelException("Somente √© poss√≠vel faturar Cota√ß√£o de Venda (901) com terceirista para Pedido de Venda - Compra e Ordem (1030).");
+                throw new MGEModelException("Somente È possÌvel faturar CotaÁ„o de Venda (901) com terceirista para Pedido de Venda - Compra e Ordem (1030).");
             } else if (ehCotacaoOrig && ehContaEOrdem && !temTerceirista) {
-                throw new MGEModelException("Somente √© poss√≠vel faturar Cota√ß√£o de Venda (901) para Pedido de Venda - Compra e Ordem (1030) com terceirista preenchido.");
+                throw new MGEModelException("Somente È possÌvel faturar CotaÁ„o de Venda (901) para Pedido de Venda - Compra e Ordem (1030) com terceirista preenchido.");
             }
 
         } finally {
-            jdbc.closeSession();
+            JapeSession.close(hnd);
         }
 
 

@@ -7,12 +7,10 @@ import br.com.sankhya.jape.event.PersistenceEvent;
 import br.com.sankhya.jape.event.TransactionContext;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.modelcore.MGEModelException;
-import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
-import br.com.sankhya.modelcore.metadata.DataDictionaryUtils;
-import com.sankhya.util.BigDecimalUtil;
-import com.sankhya.util.StringUtils;
 
 public class RegraTransporte implements EventoProgramavelJava {
+
+
     @Override
     public void beforeInsert(PersistenceEvent persistenceEvent) throws Exception {
 
@@ -24,22 +22,14 @@ public class RegraTransporte implements EventoProgramavelJava {
 
         if (isConfirmandoNota) {
             DynamicVO cabVO = (DynamicVO) persistenceEvent.getVo();
-            DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
-            final boolean ignoraFormaEntrega = DataDictionaryUtils.campoExisteEmTabela("AD_IGNORAFORMAENTREGA", "TGFTOP") && "S".equalsIgnoreCase(StringUtils.getNullAsEmpty(topVO.asString("AD_IGNORAFORMAENTREGA")));
-            final boolean isRedespacho =  "S".equalsIgnoreCase(StringUtils.getNullAsEmpty(cabVO.asString("AD_REDESPACHO")));
-            final boolean semRedespacho =  BigDecimalUtil.isNullOrZero(cabVO.asBigDecimalOrZero("CODPARCREDESPACHO"));
-            final boolean semTransportadora =  BigDecimalUtil.isNullOrZero(cabVO.asBigDecimalOrZero("CODPARCTRANSP"));
-            final boolean obrigaTransportadora = "S".equalsIgnoreCase(StringUtils.getNullAsEmpty(topVO.asString("AD_OBRIGATRANSP")));
-
-            if (!ignoraFormaEntrega && isRedespacho && semRedespacho) {
-                throw new MGEModelException("Redespacho (Recebedor) é obrigatório.");
+            String mensagem = "";
+            mensagem = mensagem.concat(CabecalhoNota.verificaRedespacho(cabVO));
+            // Verifica se TOP obriga transportadora (AD_OBRIGATRANSP = 'S') e Parceiro Transportadora n�o preenchido
+            mensagem = mensagem.concat(CabecalhoNota.verificaTransportadoraObrigatoria(cabVO));
+            if (!mensagem.isEmpty()) {
+                mensagem = mensagem.concat("\nVerifique a aba Transporte.");
+                throw new MGEModelException(mensagem);
             }
-
-            // Verifica se TOP obriga transportadora (AD_OBRIGATRANSP = 'S') e Parceiro Transportadora não preenchido
-            if (!ignoraFormaEntrega && obrigaTransportadora && semTransportadora) {
-                CabecalhoNota.verificaTransportadoraObrigatoria(cabVO);
-            }
-
         }
 
     }

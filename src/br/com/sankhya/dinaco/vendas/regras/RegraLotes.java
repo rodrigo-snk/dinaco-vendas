@@ -10,7 +10,6 @@ import br.com.sankhya.modelcore.auth.AuthenticationInfo;
 import br.com.sankhya.modelcore.comercial.*;
 import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
 import br.com.sankhya.modelcore.dwfdata.vo.ItemNotaVO;
-import br.com.sankhya.modelcore.metadata.DataDictionaryUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
 import com.sankhya.util.StringUtils;
@@ -35,6 +34,9 @@ public class RegraLotes implements Regra {
             DynamicVO itemVO = contextoRegra.getPrePersistEntityState().getNewVO();
             verificaValidade(itemVO);
             verificaLote(itemVO);
+            String mensagem = verificaPrazoVencimento(itemVO);
+
+            if (!mensagem.isEmpty()) contextoRegra.getBarramentoRegra().addMensagem(mensagem);
         }
 
     }
@@ -78,37 +80,36 @@ public class RegraLotes implements Regra {
                     if (!controle.equals(" ")) {
                         //throw new MGEModelException(String.valueOf(Estoque.getValidade(codProd,codEmp, codLocal,controle)));
                         validadeLote = Estoque.getValidadeLote(codProd,codEmp, codLocal,controle);
-                        menorValidade = Estoque.getMenorValidade(codProd, codEmp);
+                        menorValidade = Estoque.getMenorValidade(codProd, codEmp, codLocal);
 
-                        // Quando tiver um outro lote de validade menor, preenche observa√ß√£o da libera√ß√£o
+                        // Quando tiver um outro lote de validade menor, preenche observaÁ„o da liberaÁ„o
                         if (TimeUtils.compareOnlyDates(validadeLote, menorValidade) > 0) {
-                        observacao = observacao.concat("Produto: " + itemVO.getCODPROD() + " / Lote: " +itemVO.getCONTROLE()+ " / Validade: " +TimeUtils.formataDDMMYYYY(validadeLote) + " Observa√ß√£o FEFO: " +observacaoFEFO+";");
+                        observacao = observacao.concat("Produto: " + itemVO.getCODPROD() + " / Lote: " +itemVO.getCONTROLE()+ " / Validade: " +TimeUtils.formataDDMMYYYY(validadeLote) + " ObservaÁ„o FEFO: " +observacaoFEFO+";");
                         }
 
-                        // Quando tiver um lote com validade inferior ao limtite estipulado no parceiro, preenche observa√ß√£o da libera√ß√£o
+                        // Quando tiver um lote com validade inferior ao limtite estipulado no parceiro, preenche observaÁ„o da liberaÁ„o
                         if (validadeLote != null && TimeUtils.compareOnlyDates(validadeLote, dataLimiteQueParceiroAceitaVencimento) < 0) {
-                            //contextoRegra.getBarramentoRegra().addMensagem("Parceiro n√£o aceita produtos com validade menor que " + DIASVENCITEM + " dias.");
-                            observacao2 = observacao2.concat("Produto: " + itemVO.getCODPROD() + " / Lote: " +itemVO.getCONTROLE()+ " / Validade: " +TimeUtils.formataDDMMYYYY(validadeLote) + ";");
+                            //contextoRegra.getBarramentoRegra().addMensagem("Parceiro n„o aceita produtos com validade menor que " + DIASVENCITEM + " dias.");
+                            observacao2 = observacao2.concat("Produto com validade menor que aceita pelo cliente: " + itemVO.getCODPROD() + " / Lote: " +itemVO.getCONTROLE()+ " / Validade: " +TimeUtils.formataDDMMYYYY(validadeLote) + ";");
                         }
                     }
                 }
             }
 
 
-            // Quando tiver um outro lote de validade menor, exige libera√ß√£o
+            // Quando tiver um outro lote de validade menor, exige liberaÁ„o
             if (!observacao.equals("")) {
                 liberacaoLimite(contextoRegra, codUsuarioLogado, cabVO, observacao, 1001);
             } else {
                 LiberacaoAlcadaHelper.apagaSolicitacoEvento(1001, cabVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
             }
 
-            /*// Quando tiver um lote com validade inferior ao limtite estipulado no parceiro exige libera√ß√£o
-            //TODO Criar evento 1006
+            // Quando tiver um lote com validade inferior ao limtite estipulado no parceiro exige liberaÁ„o
             if (!observacao2.equals("")) {
-                liberacaoLimite(contextoRegra, codUsuarioLogado, cabVO, observacao, 1006);
+                liberacaoLimite(contextoRegra, codUsuarioLogado, cabVO, observacao, 1008);
             } else {
-                LiberacaoAlcadaHelper.apagaSolicitacoEvento(1006, cabVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
-            }*/
+                LiberacaoAlcadaHelper.apagaSolicitacoEvento(1008, cabVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
+            }
 
         }
 
@@ -179,16 +180,39 @@ public class RegraLotes implements Regra {
 
             //throw new MGEModelException(String.valueOf(Estoque.getValidade(codProd,codEmp, codLocal,controle)));
             validadeLote = Estoque.getValidadeLote(codProd,codEmp, codLocal,controle);
-            menorValidade = Estoque.getMenorValidade(codProd, codEmp);
+            menorValidade = Estoque.getMenorValidade(codProd, codEmp, codLocal);
 
             // Quando tiver um outro lote de validade menor
-            if (TimeUtils.compareOnlyDates(validadeLote, menorValidade) > 0) {
+            if (menorValidade != null && TimeUtils.compareOnlyDates(validadeLote, menorValidade) > 0) {
                 throw new MGEModelException(String.format("Existe um lote com validade menor: %s. Quebra FEFO precisa estar marcado.", TimeUtils.formataDDMMYYYY(menorValidade)));
+            }
+
+            if (!verificaPrazoVencimento(itemVO).isEmpty()) {
+                BigDecimal prazoVencimentoItens = Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC")).asBigDecimalOrZero("AD_PRAZOVENCITENS");
+                throw new MGEModelException("Cliente n„o aceita produtos com validade menor que " + prazoVencimentoItens + " dias. Quebra FEFO precisa estar marcado.");
             }
         }
     }
 
     private void verificaValidade(DynamicVO itemVO) throws Exception {
+        DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, itemVO.asBigDecimalOrZero("NUNOTA"));
+        //DynamicVO parceiroVO = Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC"));
+
+        if (ComercialUtils.ehPedidoOuVenda(cabVO.asString("TIPMOV"))) {
+            String controle = getControle(itemVO.asString("CONTROLE"));
+            BigDecimal codEmp = itemVO.asBigDecimalOrZero("CODEMP");
+            BigDecimal codProd = itemVO.asBigDecimalOrZero("CODPROD");
+            BigDecimal codLocal = itemVO.asBigDecimalOrZero("CODLOCALORIG");
+
+            Timestamp validadeLote = Estoque.getValidadeLote(codProd,codEmp, codLocal,controle);
+
+            if (validadeLote != null && TimeUtils.compareOnlyDates(validadeLote, TimeUtils.getNow()) < 0) {
+                throw new MGEModelException(String.format("Validade do lote %s expirou em %s.", controle, TimeUtils.formataDDMMYYYY(validadeLote)));
+            }
+        }
+    }
+
+    private String verificaPrazoVencimento(DynamicVO itemVO) throws Exception {
         DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, itemVO.asBigDecimalOrZero("NUNOTA"));
         DynamicVO parceiroVO = Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC"));
         final int prazoVencimentoItens = Parceiro.prazoVencimentoItens(parceiroVO.asBigDecimalOrZero("CODPARC"));
@@ -201,14 +225,11 @@ public class RegraLotes implements Regra {
         Timestamp validadeLote = Estoque.getValidadeLote(codProd,codEmp, codLocal,controle);
         Timestamp dataLimiteQueClienteAceitaVencimento = TimeUtils.dataAdd(TimeUtils.getNow(), prazoVencimentoItens, 5);
 
-        if (validadeLote != null && TimeUtils.compareOnlyDates(validadeLote, TimeUtils.getNow()) < 0) {
-            throw new MGEModelException(String.format("Validade do lote %s expirou em %s.", controle, TimeUtils.formataDDMMYYYY(validadeLote)));
-        }
-
-
         if (validadeLote != null && TimeUtils.compareOnlyDates(dataLimiteQueClienteAceitaVencimento, validadeLote) > 0) {
-            throw new MGEModelException("Parceiro " +parceiroVO.asString("NOMEPARC")+" n√£o aceita produtos com validade menor que " + prazoVencimentoItens + " dias.");
+            return "Parceiro " +parceiroVO.asString("NOMEPARC")+" n„o aceita produtos com validade menor que " + prazoVencimentoItens + " dias.";
         }
+
+        return "";
     }
 
 }

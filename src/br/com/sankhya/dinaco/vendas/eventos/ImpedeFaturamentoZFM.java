@@ -33,13 +33,10 @@ public class ImpedeFaturamentoZFM implements EventoProgramavelJava {
 
     @Override
     public void afterInsert(PersistenceEvent persistenceEvent) throws Exception {
+        JapeSession.SessionHandle hnd = null;
 
-        JdbcWrapper jdbc = null;
         try {
-            JapeSession.open();
-            jdbc = EntityFacadeFactory.getDWFFacade().getJdbcWrapper();
-            jdbc.openSession();
-
+            hnd = JapeSession.open();
             DynamicVO varVO = (DynamicVO) persistenceEvent.getVo();
             BigDecimal nuNota = varVO.asBigDecimalOrZero("NUNOTA");
             BigDecimal nuNotaOrig = varVO.asBigDecimalOrZero("NUNOTAORIG");
@@ -62,17 +59,10 @@ public class ImpedeFaturamentoZFM implements EventoProgramavelJava {
                 if (!ehZonaFrancaManaus && parceiroTemSUFRAMA) {
                     throw new MGEModelException("Para parceiros da Zona Franca de Manaus só é possível faturar para TOPs deste tipo.");
                 }
-
-
             }
-
-
-
         } finally {
-            jdbc.closeSession();
+            JapeSession.close(hnd);
         }
-
-
     }
 
     @Override
