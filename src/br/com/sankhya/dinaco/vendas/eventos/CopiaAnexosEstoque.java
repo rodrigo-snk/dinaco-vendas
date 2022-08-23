@@ -38,55 +38,15 @@ public class CopiaAnexosEstoque implements EventoProgramavelJava {
 
     @Override
     public void afterInsert(PersistenceEvent persistenceEvent) throws Exception {
-        DynamicVO estVO = (DynamicVO) persistenceEvent.getVo();
-        String codEmp = estVO.asBigDecimal("CODEMP").toString();
-        String codProd = estVO.asBigDecimal("CODPROD").toString();
-        String codLocal = estVO.asBigDecimal("CODLOCAL").toString();
-        String controle = estVO.asString("CONTROLE");
-        String codParc = estVO.asBigDecimal("CODPARC").toString();
-        String tipo = estVO.asString("TIPO").toString();
-
-        Collection<DynamicVO> anexos = EntityFacadeFactory.getDWFFacade().findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.ANEXO_SISTEMA, "this.ENTIDADE = 'Estoque' AND this.PKREGISTRO LIKE '_\\_"+codProd+"\\_%\\_"+controle+"\\_0\\_P\\_Estoque' ESCAPE '\\'"));
-
-        String chaveArquivo = AnexoSistemaHelper.buildChaveArquivo(DynamicEntityNames.ESTOQUE, (EntityPrimaryKey) estVO.getPrimaryKey());
-
-        String pkRegistro = String.format("%s_%s_%s_%s_%s_%s_Estoque", codEmp, codProd, codLocal, controle, codParc, tipo);
-
-        for (DynamicVO anexoVO: anexos) {
-            String instancia = anexoVO.asString("NOMEINSTANCIA");
-            String chave = anexoVO.asString("CHAVEARQUIVO");
-
-            DynamicVO anexoEstoqueVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().getDefaultValueObjectInstance("AnexoSistema");
-            anexoEstoqueVO.setProperty("NOMEINSTANCIA", "Estoque");
-            anexoEstoqueVO.setProperty("PKREGISTRO", pkRegistro);
-            anexoEstoqueVO.setProperty("NOMEARQUIVO", anexoVO.getProperty("NOMEARQUIVO"));
-            anexoEstoqueVO.setProperty("CHAVEARQUIVO", chaveArquivo);
-            anexoEstoqueVO.setProperty("DESCRICAO", anexoVO.getProperty("DESCRICAO"));
-            anexoEstoqueVO.setProperty("NOMEARQUIVO", anexoVO.getProperty("NOMEARQUIVO"));
-            anexoEstoqueVO.setProperty("TIPOAPRES", anexoVO.getProperty("TIPOAPRES"));
-            anexoEstoqueVO.setProperty("TIPOACESSO", anexoVO.getProperty("TIPOACESSO"));
-            anexoEstoqueVO.setProperty("CODUSU", anexoVO.getProperty("CODUSU"));
-            anexoEstoqueVO.setProperty("DHCAD", anexoVO.getProperty("DHCAD"));
-
-            EntityFacadeFactory.getDWFFacade().createEntity("AnexoSistema", (EntityVO) anexoEstoqueVO);
-
-
-            Path sourceDirectory = Paths.get(SWRepositoryUtils.getBaseFolder().getAbsolutePath()+"/Sistema/Anexos/"+instancia+"/"+chave);
-            Path targetDirectory = Paths.get(SWRepositoryUtils.getBaseFolder().getAbsolutePath()+"/Sistema/Anexos/"+anexoEstoqueVO.asString("NOMEINSTANCIA")+"/"+anexoEstoqueVO.asString("CHAVEARQUIVO"));
-
-            Files.copy(sourceDirectory, targetDirectory);
-
-
-        }
-
-
-
-
+        if (true) throw new Exception("DEURUIMINS");
 
     }
 
     @Override
     public void afterUpdate(PersistenceEvent persistenceEvent) throws Exception {
+        DynamicVO estVO = (DynamicVO) persistenceEvent.getVo();
+        if (true) throw new Exception("DEURUIMUPD" + persistenceEvent.getModifingFields().toString());
+
 
     }
 

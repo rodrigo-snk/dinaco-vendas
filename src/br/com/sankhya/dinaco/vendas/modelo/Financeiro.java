@@ -164,7 +164,7 @@ public class Financeiro {
             ls.setCodCenCus(cabVO.asBigDecimalOrZero("CODCENCUS"));
             ls.setSolicitante(codUsuarioLogado);
             ls.setLiberador(BigDecimal.ZERO);
-            ls.setObsLiberador(StringUtils.limitSize(observacao,255));
+            ls.setDescricao(StringUtils.limitSize(observacao,255));
             ls.setVlrAtual(cabVO.asBigDecimalOrZero("VLRNOTA"));
             ls.setVlrTotal(cabVO.asBigDecimalOrZero("VLRNOTA"));
             ls.setCodTipOper(cabVO.asBigDecimalOrZero("CODTIPOPER"));
@@ -175,7 +175,7 @@ public class Financeiro {
             boolean semSolicitacao = liberacaoLimiteVO == null;
 
             if (semSolicitacao) {
-                LiberacaoAlcadaHelper.validarLiberacoesPendentes(cabVO.asBigDecimalOrZero("NUNOTA"));
+               // LiberacaoAlcadaHelper.validarLiberacoesPendentes(cabVO.asBigDecimalOrZero("NUNOTA"));
                 LiberacaoAlcadaHelper.processarLiberacao(ls);
                 contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
             } else {

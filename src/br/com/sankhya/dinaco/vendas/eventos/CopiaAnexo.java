@@ -44,7 +44,6 @@ public class CopiaAnexo implements EventoProgramavelJava {
         jdbcWrapper = dwfFacade.getJdbcWrapper();
         String instancia = estVO.getValueObjectID().replace(".ValueObject", "");
 
-
         NativeSql sql = new NativeSql(jdbcWrapper);
         sql.appendSql("select anx.*\n");
         sql.appendSql("from TSIANX ANX\n");

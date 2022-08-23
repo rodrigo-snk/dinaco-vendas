@@ -47,7 +47,7 @@ public class AtualizaCustoMoeda implements ScheduledAction {
         EntityFacade dwfFacade = EntityFacadeFactory.getDWFFacade();
 
         try {
-            FinderWrapper finder = new FinderWrapper(DynamicEntityNames.CUSTO, "this.AD_CUSSEMICMSUSD is NULL OR this.AD_CUSSEMICMSEUR is NULL");
+            FinderWrapper finder = new FinderWrapper(DynamicEntityNames.CUSTO, "this.AD_CUSSEMICMSUSD is NULL OR this.AD_CUSSEMICMSEUR is NULL or this.AD_CUSSEMICMSUSD = 0 or this.AD_CUSSEMICMSEUR = 0");
             finder.setMaxResults(-1);
             Collection<DynamicVO> custos = dwfFacade.findByDynamicFinderAsVO(finder);
             //Collection<DynamicVO> custos = dwfFacade.findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.CUSTO, "this.AD_CUSSEMICMSUSD IS NOT NULL OR this.AD_CUSSEMICMSEUR IS NOT NULL"));

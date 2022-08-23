@@ -1,5 +1,6 @@
 package br.com.sankhya.dinaco.vendas.acoes;
 
+import br.com.sankhya.dinaco.vendas.modelo.Estoque;
 import br.com.sankhya.extensions.actionbutton.AcaoRotinaJava;
 import br.com.sankhya.extensions.actionbutton.ContextoAcao;
 import br.com.sankhya.extensions.actionbutton.Registro;
@@ -9,6 +10,7 @@ import br.com.sankhya.jape.util.FinderWrapper;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.jape.vo.EntityVO;
 import br.com.sankhya.mgecomercial.model.facades.helpper.ItemNotaHelpper;
+import br.com.sankhya.mgewms.model.helpper.EstoqueHelpper;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.comercial.*;
 import br.com.sankhya.modelcore.comercial.impostos.ImpostosHelpper;
@@ -84,17 +86,20 @@ public class AlteraLote implements AcaoRotinaJava {
 
                 criaNotaDeEntrada(dwfFacade, novoControle, estVO, prodVO, qtd, cabEntradaVO);
 
-                DynamicVO cusVO = getCustoVO(codProd, codEmp, controle);
+                //DynamicVO cusVO = getCustoVO(codProd, codEmp, controle);
 
-
-                if (cusVO != null) {
-                    cusVO.setProperty("CONTROLE", novoControle);
-                    cusVO.setProperty("DTATUAL", TimeUtils.getNow());
-                    dwfFacade.createEntity(DynamicEntityNames.CUSTO, (EntityVO) cusVO);
-                }
+               /* if (cusVO != null) {
+                    DynamicVO custoVO = (DynamicVO) dwfFacade.getDefaultValueObjectInstance(DynamicEntityNames.CUSTO);
+                    custoVO.setProperty("CODEMP", cusVO.asBigDecimalOrZero("CODEMP"));
+                    custoVO.setProperty("CODPROD", cusVO.asBigDecimalOrZero("CODPROD"));
+                    custoVO.setProperty("CONTROLE", novoControle);
+                    custoVO.setProperty("DTATUAL", TimeUtils.getNow());
+                    dwfFacade.createEntity(DynamicEntityNames.CUSTO, (EntityVO) custoVO);
+                }*/
 
 
                 criaLigacaoVar(dwfFacade, estVO, qtd, cabSaidaVO, cabEntradaVO);
+
 
                 contextoAcao.setMensagemRetorno(String.format("Alteração feita com sucesso! Nota de saída: %s | Nota de entrada: %s", cabSaidaVO.getNUNOTA(), cabEntradaVO.getNUNOTA()));
 
@@ -123,6 +128,8 @@ public class AlteraLote implements AcaoRotinaJava {
         itemVO.setCODLOCALORIG(estVO.asBigDecimal("CODLOCAL"));
         itemVO.setATUALESTOQUE(BigDecimal.ZERO);
         itemVO.setRESERVA("N");
+        if (itemVO.containsProperty("AD_DTVAL")) itemVO.setProperty("AD_DTVAL", estVO.asTimestamp("DTVAL"));
+        if (itemVO.containsProperty("AD_DTFABRICACAO")) itemVO.setProperty("AD_DTFABRICACAO", estVO.asTimestamp("DTFABRICACAO"));
         itens.add(itemVO);
         ItemNotaHelpper.saveItensNota(itens, cabSaidaVO);
 
@@ -162,6 +169,8 @@ public class AlteraLote implements AcaoRotinaJava {
         itemVO.setCODLOCALORIG(estVO.asBigDecimal("CODLOCAL"));
         itemVO.setATUALESTOQUE(BigDecimal.ONE);
         itemVO.setRESERVA("N");
+        if (itemVO.containsProperty("AD_DTVAL")) itemVO.setProperty("AD_DTVAL", estVO.asTimestamp("DTVAL"));
+        if (itemVO.containsProperty("AD_DTFABRICACAO")) itemVO.setProperty("AD_DTFABRICACAO", estVO.asTimestamp("DTFABRICACAO"));
         itens.add(itemVO);
         ItemNotaHelpper.saveItensNota(itens, cabEntradaVO);
 
@@ -170,8 +179,9 @@ public class AlteraLote implements AcaoRotinaJava {
         estNovoVO.setProperty("DTVAL", estVO.asTimestamp("DTVAL"));
         dwfFacade.saveEntity(DynamicEntityNames.ESTOQUE, (EntityVO) estNovoVO);
 
-        PrecoCustoHelper.configuraProcessoAtualizacaoCusto();
+        Estoque.copiaAnexos(estVO, estNovoVO);
 
+        PrecoCustoHelper.configuraProcessoAtualizacaoCusto();
 
         // Recalculo de impostos
         final ImpostosHelpper impostos = new ImpostosHelpper();

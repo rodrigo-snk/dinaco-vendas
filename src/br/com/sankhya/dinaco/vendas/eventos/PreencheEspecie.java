@@ -4,6 +4,7 @@ import br.com.sankhya.extensions.eventoprogramavel.EventoProgramavelJava;
 import br.com.sankhya.jape.event.PersistenceEvent;
 import br.com.sankhya.jape.event.TransactionContext;
 import br.com.sankhya.jape.vo.DynamicVO;
+import br.com.sankhya.modelcore.MGEModelException;
 
 
 import static br.com.sankhya.dinaco.vendas.modelo.Produto.validaEspecie;
@@ -19,7 +20,7 @@ public class PreencheEspecie implements EventoProgramavelJava {
 
     @Override
     public void beforeUpdate(PersistenceEvent persistenceEvent) throws Exception {
-            validaEspecie((DynamicVO) persistenceEvent.getVo());
+        validaEspecie((DynamicVO) persistenceEvent.getVo());
     }
 
     @Override
@@ -29,7 +30,7 @@ public class PreencheEspecie implements EventoProgramavelJava {
 
     @Override
     public void afterInsert(PersistenceEvent persistenceEvent) throws Exception {
-            validaEspecie((DynamicVO) persistenceEvent.getVo());
+        validaEspecie((DynamicVO) persistenceEvent.getVo());
     }
 
     @Override

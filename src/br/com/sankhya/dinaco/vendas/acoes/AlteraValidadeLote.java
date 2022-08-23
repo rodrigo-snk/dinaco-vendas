@@ -3,10 +3,15 @@ package br.com.sankhya.dinaco.vendas.acoes;
 import br.com.sankhya.extensions.actionbutton.AcaoRotinaJava;
 import br.com.sankhya.extensions.actionbutton.ContextoAcao;
 import br.com.sankhya.extensions.actionbutton.Registro;
+import br.com.sankhya.inventario.helpers.CustoHelper;
 import br.com.sankhya.jape.EntityFacade;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.jape.vo.EntityVO;
 import br.com.sankhya.mgecomercial.model.facades.helpper.ItemNotaHelpper;
+import br.com.sankhya.modelcore.comercial.ComercialUtils;
+import br.com.sankhya.modelcore.comercial.PrecoCustoHelper;
+import br.com.sankhya.modelcore.comercial.impostos.ImpostosHelpper;
+import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
 import br.com.sankhya.modelcore.dwfdata.vo.CabecalhoNotaVO;
 import br.com.sankhya.modelcore.dwfdata.vo.ItemNotaVO;
 import br.com.sankhya.modelcore.dwfdata.vo.ProdutoVO;
@@ -31,10 +36,10 @@ public class AlteraValidadeLote implements AcaoRotinaJava {
         Registro[] linhas = contextoAcao.getLinhas();
 
         if (linhas.length > 1) contextoAcao.mostraErro("Selecione apenas um registro.");
-        //Timestamp dtFabricacao = (Timestamp) contextoAcao.getParam("DTFABRICACAO");
+        Timestamp dtFabricacao = (Timestamp) contextoAcao.getParam("DTFABRICACAO");
         Timestamp dtVal = (Timestamp) contextoAcao.getParam("DTVAL");
 
-        if (dtVal == null) contextoAcao.mostraErro("Para proceder com a ação é necessário preencher ao menos um dos parâmetros.");
+        if (dtVal == null && dtFabricacao == null) contextoAcao.mostraErro("Para proceder com a ação é necessário preencher ao menos um dos parâmetros.");
 
         for (Registro linha: linhas) {
             BigDecimal codEmp = (BigDecimal) linha.getCampo("CODEMP");
@@ -73,11 +78,15 @@ public class AlteraValidadeLote implements AcaoRotinaJava {
                 cabEntradaVO.setDTENTSAI(TimeUtils.getNow());
                 cabEntradaVO.setDTMOV(TimeUtils.getNow());
                 cabEntradaVO.setDTFATUR(TimeUtils.getNow());
-                //contextoAcao.confirmar("Atenção", estVO.toString() ,1);
 
                 criaNotaDeSaida(dwfFacade, estVO, prodVO, cabSaidaVO);
 
-                criaNotaDeEntrada(dwfFacade, dtVal, estVO, prodVO, cabEntradaVO);
+                criaNotaDeEntrada(dwfFacade, dtVal, dtFabricacao, estVO, prodVO, cabEntradaVO);
+
+                // Recalculo de impostos
+                final ImpostosHelpper impostos = new ImpostosHelpper();
+                impostos.calcularImpostos(cabEntradaVO.getNUNOTA());
+                impostos.totalizarNota(cabEntradaVO.getNUNOTA());
 
                 criaLigacaoVar(dwfFacade, estVO, cabSaidaVO, cabEntradaVO);
 
@@ -113,40 +122,55 @@ public class AlteraValidadeLote implements AcaoRotinaJava {
         itemVO.setCODLOCALORIG(estVO.asBigDecimal("CODLOCAL"));
         itemVO.setATUALESTOQUE(BigDecimal.ZERO);
         itemVO.setRESERVA("N");
+        if (itemVO.containsProperty("AD_DTVAL")) itemVO.setProperty("AD_DTVAL", estVO.asTimestamp("DTVAL"));
+        if (itemVO.containsProperty("AD_DTFABRICACAO")) itemVO.setProperty("AD_DTFABRICACAO", estVO.asTimestamp("DTFABRICACAO"));
         itens.add(itemVO);
-        //contextoAcao.confirmar("Atenção","Antes de salvar os itens na nota." ,2);
         ItemNotaHelpper.saveItensNota(itens, cabSaidaVO);
         confirmaNota(cabSaidaVO.getNUNOTA());
 
         return cabSaidaVO.getNUNOTA();
     }
 
-    private BigDecimal criaNotaDeEntrada(EntityFacade dwfFacade, Timestamp dtVal, DynamicVO estVO, ProdutoVO prodVO, CabecalhoNotaVO cabEntradaVO) throws Exception {
+    private BigDecimal criaNotaDeEntrada(EntityFacade dwfFacade, Timestamp dtVal, Timestamp dtFabricacao, DynamicVO estVO, ProdutoVO prodVO, CabecalhoNotaVO cabEntradaVO) throws Exception {
         ItemNotaVO itemVO;
         Collection<ItemNotaVO> itens;
         //NOTA DE ENTRADA
         dwfFacade.createEntity(DynamicEntityNames.CABECALHO_NOTA, cabEntradaVO);
+        String usarPrecoCusto = TipoOperacaoUtils.getTopVO(cabEntradaVO.getCODTIPOPER()).asString("USARPRECOCUSTO");
+        BigDecimal precoCusto = ComercialUtils.obtemPrecoCusto(usarPrecoCusto, estVO.asString("CONTROLE"),estVO.asBigDecimal("CODEMP"), estVO.asBigDecimal("CODLOCAL"), estVO.asBigDecimal("CODPROD"));
+
         itens = new ArrayList<>();
         itemVO = (ItemNotaVO) dwfFacade.getDefaultValueObjectInstance(DynamicEntityNames.ITEM_NOTA, ItemNotaVO.class);
         itemVO.setNUNOTA(cabEntradaVO.getNUNOTA());
         itemVO.setCODPROD(estVO.asBigDecimal("CODPROD"));
         itemVO.setCODEMP(estVO.asBigDecimal("CODEMP"));
         itemVO.setCODVOL(prodVO.getCODVOL());
-        itemVO.setVLRUNIT(BigDecimal.ONE);
-        itemVO.setCONTROLE(estVO.asString("CONTROLE"));
         itemVO.setQTDNEG(estVO.asBigDecimal("ESTOQUE"));
+        itemVO.setVLRUNIT(precoCusto);
+        itemVO.setVLRTOT(precoCusto.multiply(itemVO.getQTDNEG()));
+        itemVO.setCONTROLE(estVO.asString("CONTROLE"));
         itemVO.setCODLOCALORIG(estVO.asBigDecimal("CODLOCAL"));
         itemVO.setATUALESTOQUE(BigDecimal.ONE);
         itemVO.setRESERVA("N");
+        if (itemVO.containsProperty("AD_DTVAL"))  itemVO.setProperty("AD_DTVAL", dtVal);
+        if (itemVO.containsProperty("AD_DTFABRICACAO")) itemVO.setProperty("AD_DTFABRICACAO",dtFabricacao);
         itens.add(itemVO);
         ItemNotaHelpper.saveItensNota(itens, cabEntradaVO);
 
         DynamicVO estNovoVO = (DynamicVO) dwfFacade.findEntityByPrimaryKeyAsVO(DynamicEntityNames.ESTOQUE, new Object[] {estVO.asBigDecimal("CODEMP"), estVO.asBigDecimal("CODPROD"), estVO.asBigDecimal("CODLOCAL"), estVO.asString("CONTROLE"), estVO.asBigDecimal("CODPARC"), estVO.asString("TIPO")});
-        //if (dtFabricacao != null) estNovoVO.setProperty("DTFABRICACAO", estVO.asTimestamp("DTFABRICACAO"));
+        if (dtFabricacao != null) estNovoVO.setProperty("DTFABRICACAO", dtFabricacao);
         if (dtVal != null) estNovoVO.setProperty("DTVAL", dtVal);
         if (estNovoVO.containsProperty("AD_REVALIDADO")) estNovoVO.setProperty("AD_REVALIDADO", "S");
         if (estNovoVO.containsProperty("AD_CONTREVAL")) estNovoVO.setProperty("AD_CONTREVAL", estNovoVO.asBigDecimalOrZero("AD_CONTREVAL").add(BigDecimal.ONE));
         dwfFacade.saveEntity(DynamicEntityNames.ESTOQUE, (EntityVO) estNovoVO);
+
+        PrecoCustoHelper.configuraProcessoAtualizacaoCusto();
+
+        // Recalculo de impostos
+        final ImpostosHelpper impostos = new ImpostosHelpper();
+        impostos.calcularImpostos(cabEntradaVO.getNUNOTA());
+        impostos.totalizarNota(cabEntradaVO.getNUNOTA());
+
 
         confirmaNota(cabEntradaVO.getNUNOTA());
 

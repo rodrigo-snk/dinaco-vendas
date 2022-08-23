@@ -175,7 +175,7 @@ public class DebugTest {
         System.out.println(pkRegistro);
 
         BigDecimal precoTabela = BigDecimal.TEN;
-
+/*
         BigDecimal QUATROPORCENTO = BigDecimal.valueOf(-0.04);
         BigDecimal SETEPORCENTO = BigDecimal.valueOf(-0.07);
         BigDecimal DEZOITOPORCENTO = BigDecimal.valueOf(-0.18);
@@ -185,12 +185,35 @@ public class DebugTest {
         BigDecimal precoTabela7p = expressaoCalculo.divide(BigDecimal.valueOf(0.9075).add(QUATROPORCENTO), MathContext.DECIMAL32).multiply(BigDecimal.valueOf(1.03));
         // Vlr. Venda 4% = (((Vlr. Venda 12%/1,03) * 0,7875) /  0,8675 ) * 1,03
         BigDecimal precoTabela4p = expressaoCalculo.divide(BigDecimal.valueOf(0.9075).add(SETEPORCENTO), MathContext.DECIMAL32).multiply(BigDecimal.valueOf(1.03));
-        BigDecimal precoTabela18p = expressaoCalculo.divide(BigDecimal.valueOf(0.9075).add(DEZOITOPORCENTO), MathContext.DECIMAL32).multiply(BigDecimal.valueOf(1.03));
+        BigDecimal precoTabela18p = expressaoCalculo.divide(BigDecimal.valueOf(0.9075).add(DEZOITOPORCENTO), MathContext.DECIMAL32).multiply(BigDecimal.valueOf(1.03));*/
 
 
-        System.out.println(precoTabela7p);
+        BigDecimal QUATROPORCENTO = BigDecimal.valueOf(0.04);
+        BigDecimal SETEPORCENTO = BigDecimal.valueOf(0.07);
+        BigDecimal NOVEVINTECINCOPORCENTO = BigDecimal.valueOf(0.0925);
+        BigDecimal DOZEPORCENTO = BigDecimal.valueOf(0.12);
+        BigDecimal DEZOITOPORCENTO = BigDecimal.valueOf(0.18);
+
+        BigDecimal custo = BigDecimal.valueOf(0.03);
+        BigDecimal margemMin = BigDecimal.valueOf(0.235);
+        BigDecimal lcProd = BigDecimal.valueOf(8.08);
+
+
+        BigDecimal fator7 = BigDecimal.ONE.subtract(SETEPORCENTO).subtract(NOVEVINTECINCOPORCENTO).subtract(custo).subtract(margemMin);
+        BigDecimal fator4 = BigDecimal.ONE.subtract(QUATROPORCENTO).subtract(NOVEVINTECINCOPORCENTO).subtract(custo).subtract(margemMin);
+        BigDecimal fator12 = BigDecimal.ONE.subtract(DOZEPORCENTO).subtract(NOVEVINTECINCOPORCENTO).subtract(custo).subtract(margemMin);
+
+        System.out.println(fator7);
+        System.out.println(fator7.multiply(BigDecimal.valueOf(1.03)));
+
+
+        System.out.println("NETMIN7: " +lcProd.divide(fator7, MathContext.DECIMAL128).multiply(BigDecimal.valueOf(1.03)));
+        System.out.println("NETMIN4: " +lcProd.divide(fator4, MathContext.DECIMAL128).multiply(BigDecimal.valueOf(1.03)));
+        System.out.println("NETMIN12: " +lcProd.divide(fator12, MathContext.DECIMAL128).multiply(BigDecimal.valueOf(1.03)));
+
+        /*System.out.println(precoTabela7p);
         System.out.println(precoTabela4p);
-        System.out.println(precoTabela18p);
+        System.out.println(precoTabela18p);*/
 
         System.out.println(CabecalhoNota.ehPedidoVenda("P"));
         System.out.println(CabecalhoNota.ehPedidoVenda("V"));
@@ -246,6 +269,14 @@ public class DebugTest {
         System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getNow(), null));
 
         final boolean faturamentoFuturo = TimeUtils.compareOnlyDates(TimeUtils.getNow(), TimeUtils.getMonthEnd(TimeUtils.getNow())) < 0;
+
+
+        BigDecimal decimais = BigDecimal.valueOf(10.8675768055400);
+        System.out.println(decimais.toString());
+        System.out.println(BigDecimalUtil.valueOf(decimais.toString()).doubleValue());
+
+        System.out.println(BigDecimalUtil.toCurrency(decimais));
+
 
 
 

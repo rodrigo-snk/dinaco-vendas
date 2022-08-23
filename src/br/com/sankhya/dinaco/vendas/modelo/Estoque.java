@@ -2,6 +2,7 @@ package br.com.sankhya.dinaco.vendas.modelo;
 
 import br.com.sankhya.jape.EntityFacade;
 import br.com.sankhya.jape.core.JapeSession;
+import br.com.sankhya.jape.dao.EntityPrimaryKey;
 import br.com.sankhya.jape.dao.JdbcWrapper;
 import br.com.sankhya.jape.sql.NativeSql;
 import br.com.sankhya.jape.util.FinderWrapper;
@@ -9,11 +10,17 @@ import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.jape.vo.EntityVO;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.dwfdata.vo.EstoqueVO;
+import br.com.sankhya.modelcore.helper.AnexoSistemaHelper;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
+import br.com.sankhya.modelcore.util.SWRepositoryUtils;
 import com.sankhya.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.Collection;
@@ -172,6 +179,54 @@ public class Estoque {
         } finally {
             JapeSession.close(hnd);
         }
+    }
+
+    public static void copiaAnexos(DynamicVO estVO, DynamicVO estNovo) throws Exception {
+
+        String codEmp = estNovo.asBigDecimal("CODEMP").toString();
+        String codProd = estNovo.asBigDecimal("CODPROD").toString();
+        String codLocal = estNovo.asBigDecimal("CODLOCAL").toString();
+        String controle = estNovo.asString("CONTROLE");
+        String codParc = estNovo.asBigDecimal("CODPARC").toString();
+        String tipo = estNovo.asString("TIPO");
+
+        Collection<DynamicVO> anexos = EntityFacadeFactory.getDWFFacade().findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.ANEXO_SISTEMA, "this.NOMEINSTANCIA = 'Estoque' AND this.PKREGISTRO LIKE '_\\_" + estVO.asBigDecimal("CODPROD").toString() + "\\_%\\_" + estVO.asString("CONTROLE") + "\\_0\\_P\\_Estoque' ESCAPE '\\'"));
+
+        //String chaveArquivo = AnexoSistemaHelper.buildChaveArquivo(DynamicEntityNames.ESTOQUE, (EntityPrimaryKey) estNovo.getPrimaryKey());
+
+        String pkRegistro = String.format("%s_%s_%s_%s_%s_%s_Estoque", codEmp, codProd, codLocal, controle, codParc, tipo);
+
+        for (DynamicVO anexoVO : anexos) {
+            String instancia = anexoVO.asString("NOMEINSTANCIA");
+            String chave = anexoVO.asString("CHAVEARQUIVO");
+
+            DynamicVO anexoEstoqueVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().getDefaultValueObjectInstance(DynamicEntityNames.ANEXO_SISTEMA);
+            anexoEstoqueVO.setProperty("NOMEINSTANCIA", "Estoque");
+            anexoEstoqueVO.setProperty("PKREGISTRO", pkRegistro);
+            anexoEstoqueVO.setProperty("NOMEARQUIVO", anexoVO.getProperty("NOMEARQUIVO"));
+            anexoEstoqueVO.setProperty("DESCRICAO", anexoVO.getProperty("DESCRICAO"));
+            anexoEstoqueVO.setProperty("NOMEARQUIVO", anexoVO.getProperty("NOMEARQUIVO"));
+            anexoEstoqueVO.setProperty("TIPOAPRES", anexoVO.getProperty("TIPOAPRES"));
+            anexoEstoqueVO.setProperty("TIPOACESSO", anexoVO.getProperty("TIPOACESSO"));
+            anexoEstoqueVO.setProperty("CODUSU", anexoVO.getProperty("CODUSU"));
+            anexoEstoqueVO.setProperty("DHCAD", anexoVO.getProperty("DHCAD"));
+
+            EntityFacadeFactory.getDWFFacade().createEntity(DynamicEntityNames.ANEXO_SISTEMA, (EntityVO) anexoEstoqueVO);
+            anexoEstoqueVO.setProperty("CHAVEARQUIVO", gerarMD5ChaveArquivo(anexoEstoqueVO.asBigDecimalOrZero("NUATTACH").toString() + "_" + anexoEstoqueVO.asString("PKREGISTRO")));
+            EntityFacadeFactory.getDWFFacade().saveEntity(DynamicEntityNames.ANEXO_SISTEMA, (EntityVO) anexoEstoqueVO);
+
+            Path sourceDirectory = Paths.get(SWRepositoryUtils.getBaseFolder().getAbsolutePath() + "/Sistema/Anexos/" + instancia + "/" + chave);
+            Path targetDirectory = Paths.get(SWRepositoryUtils.getBaseFolder().getAbsolutePath() + "/Sistema/Anexos/" + anexoEstoqueVO.asString("NOMEINSTANCIA") + "/" + anexoEstoqueVO.asString("CHAVEARQUIVO"));
+
+            //if (true) throw new MGEModelException("source: "+sourceDirectory + "\ntarget: "+targetDirectory);
+            Files.copy(sourceDirectory, targetDirectory);
+        }
+
+    }
+
+    private static String gerarMD5ChaveArquivo(String chaveArquivo) throws Exception {
+        MessageDigest md5 = MessageDigest.getInstance("MD5");
+        return StringUtils.toHexString(md5.digest(chaveArquivo.getBytes()));
     }
 
 }

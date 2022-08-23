@@ -18,6 +18,8 @@ import com.sankhya.util.StringUtils;
 import java.math.BigDecimal;
 import java.util.*;
 
+import static br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota.updateEspecie;
+
 public class Produto {
 
     public static DynamicVO getProdutoByPK(Object codProd) throws MGEModelException {
@@ -116,26 +118,25 @@ public class Produto {
             });
 
             if (especies.size() > 1) {
-                cabVO.setProperty("VOLUME", "DIVERSOS");
+                //cabVO.setProperty("VOLUME", "DIVERSOS");
+                CabecalhoNota.updateEspecie(cabVO,"DIVERSOS");
             }
             if (especies.size() == 1) {
                 String especie = especies.stream().findFirst().get();
-                cabVO.setProperty("VOLUME", StringUtils.getEmptyAsNull(especie));
+                //cabVO.setProperty("VOLUME", StringUtils.getEmptyAsNull(especie));
+                CabecalhoNota.updateEspecie(cabVO,StringUtils.getEmptyAsNull(especie));
+
             }
             if (especies.size() == 0) {
                 cabVO.setProperty("VOLUME", null);
+                CabecalhoNota.updateEspecie(cabVO,null);
             }
-            EntityFacadeFactory.getDWFFacade().saveEntity(DynamicEntityNames.CABECALHO_NOTA, (EntityVO) cabVO);
-
-            //CabecalhoNota.updateEspecie(cabVO);
-
-
+            //EntityFacadeFactory.getDWFFacade().saveEntity(DynamicEntityNames.CABECALHO_NOTA, (EntityVO) cabVO);
         } catch (Exception e) {
             MGEModelException.throwMe(e);
         } finally {
             JapeSession.close(hnd);
         }
-
     }
 
     public static DynamicVO getCustoVO(Object codProd, Object codEmp, Object controle) throws MGEModelException {

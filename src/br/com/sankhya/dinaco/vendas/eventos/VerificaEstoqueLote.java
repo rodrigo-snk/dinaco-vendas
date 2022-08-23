@@ -34,6 +34,7 @@ public class VerificaEstoqueLote implements EventoProgramavelJava {
             String controle = Estoque.getControle(itemVO.asString("CONTROLE"));
             DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, itemVO.asBigDecimalOrZero("NUNOTA"));
 
+            // TOPs na regra de negócio 17 - VERIFICA QTD DE ESTOQUE
             if (RegraNegocio.verificaRegra(BigDecimal.valueOf(17), cabVO.asBigDecimalOrZero("CODTIPOPER"))) {
                 FinderWrapper finder = new FinderWrapper(DynamicEntityNames.ESTOQUE, "this.CODEMP = ? and this.CODPROD = ? and this.CODLOCAL = ? and this.CONTROLE = ? and this.CODPARC = 0 and this.TIPO = 'P'", new Object[] {itemVO.asBigDecimalOrZero("CODEMP"), itemVO.asBigDecimalOrZero("CODPROD"), itemVO.asBigDecimalOrZero("CODLOCALORIG"), controle});
                 Collection<DynamicVO> estoques = dwfFacade.findByDynamicFinderAsVO(finder);

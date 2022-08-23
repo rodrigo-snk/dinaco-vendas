@@ -1,6 +1,5 @@
 package br.com.sankhya.dinaco.vendas.regras;
 
-import br.com.sankhya.dinaco.vendas.modelo.CabecalhoNota;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.modelcore.MGEModelException;
@@ -13,10 +12,8 @@ import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
 import br.com.sankhya.modelcore.metadata.DataDictionaryUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
-import com.sankhya.model.entities.vo.EmpresaVO;
 import com.sankhya.util.BigDecimalUtil;
 import com.sankhya.util.StringUtils;
-import org.apache.james.mime4j.message.Entity;
 
 import java.math.BigDecimal;
 
@@ -42,7 +39,6 @@ public class RegraFrete implements Regra {
             final boolean topVerificaFreteMinimo  = "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_FRETEMIN")));
             final boolean entregaAmostra = topVO.containsProperty("AD_ENTREGAAMOSTRA") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_ENTREGAAMOSTRA")));
             final boolean ignoraFormaEntrega = DataDictionaryUtils.campoExisteEmTabela("AD_IGNORAFORMAENTREGA", "TGFTOP") && "S".equalsIgnoreCase(StringUtils.getNullAsEmpty(topVO.asString("AD_IGNORAFORMAENTREGA")));
-
 
             if (StringUtils.getNullAsEmpty(cabVO.asString("AD_FORMAENTREGA")).isEmpty() && ComercialUtils.ehVenda(cabVO.asString("TIPMOV")) && !entregaAmostra  && !ignoraFormaEntrega)
                 throw new MGEModelException("Preenchimento da Forma de Entrega é obrigatório.");

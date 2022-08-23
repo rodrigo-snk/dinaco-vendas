@@ -31,7 +31,7 @@ public class VerificaCRNaturezaParceiro implements EventoProgramavelJava {
 
             String mensagem = "";
             if (semNatureza) mensagem = mensagem.concat("Preenchimento da Natureza é obrigatório.\n");
-            if (semCR) mensagem = mensagem.concat("Preenchimento  do Centro de Resultado é obrigatório.");
+            if (semCR) mensagem = mensagem.concat("Preenchimento do Centro de Resultado é obrigatório.");
 
             if (!mensagem.isEmpty()) throw new MGEModelException(mensagem);
         }

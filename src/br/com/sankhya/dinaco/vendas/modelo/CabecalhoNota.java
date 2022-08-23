@@ -27,6 +27,7 @@ import br.com.sankhya.util.troubleshooting.SKError;
 import br.com.sankhya.util.troubleshooting.TSLevel;
 import br.com.sankhya.ws.BusinessException;
 import br.com.sankhya.ws.ServiceContext;
+import com.google.gson.JsonObject;
 import com.sankhya.util.BigDecimalUtil;
 import com.sankhya.util.JdbcUtils;
 import com.sankhya.util.StringUtils;
@@ -155,14 +156,17 @@ public class CabecalhoNota {
         }
     }
 
-    public static void updateEspecie(DynamicVO cabVO) throws MGEModelException {
+
+    public static void updateEspecie(DynamicVO cabVO, String volume) throws MGEModelException {
         JapeSession.SessionHandle hnd = null;
         try {
             hnd = JapeSession.open();
-            JapeFactory.dao(DynamicEntityNames.CABECALHO_NOTA)
-                    .prepareToUpdateByPK(cabVO.asBigDecimalOrZero("NUNOTA"))
-                    .set("VOLUME",cabVO.getProperty("VOLUME"))
+
+            JapeFactory.dao(DynamicEntityNames.CABECALHO_NOTA).
+                    prepareToUpdateByPK(cabVO.asBigDecimalOrZero("NUNOTA"))
+                    .set("VOLUME",volume)
                     .update();
+
         } catch (Exception e) {
             MGEModelException.throwMe(e);
         } finally {
@@ -379,7 +383,8 @@ public class CabecalhoNota {
         return getCotacaoMediaPeriodo(codMoeda, primeiroDiaMesPassado, ultimoDiaMesPassado);
     }
 
-    public static void verificaPTAX(DynamicVO cabVO, Boolean alterandoVlrMoeda) throws Exception {
+    public static void
+    verificaPTAX(DynamicVO cabVO, Boolean alterandoVlrMoeda, Boolean atualizandoCab) throws Exception {
 
         if (!BigDecimalUtil.isNullOrZero(cabVO.asBigDecimal("CODMOEDA"))) {
             DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
@@ -399,6 +404,7 @@ public class CabecalhoNota {
             }
 
             if (topPtaxDiaAnterior && !ptaxFixo) {
+                //if (atualizandoCab && !mesmaCotacao) throw (BusinessException) SKError.registry(TSLevel.ERROR, "DINACO_REGRAS", new BusinessException(StringUtils.htmlScape("Selecione a cotação do dia anterior.")));
                 cabVO.setProperty("VLRMOEDA", getCotacaoDiaAnterior(cabVO.asBigDecimal("CODMOEDA"), dataReferencia));
             }
 
