@@ -51,13 +51,13 @@ public class ImpedeFaturamentoZFM implements EventoProgramavelJava {
                 DynamicVO cabOrigVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNotaOrig);
                 final boolean parceiroTemSUFRAMA = !StringUtils.getNullAsEmpty(cabOrigVO.asDymamicVO("Parceiro").asDymamicVO("ComplementoParc").asString("CODSUFRAMA")).isEmpty();
 
-                // Se TOP de destino estiver marcada como Zona Franca de Manaus e o parceiro n√£o tiver SUFRAMA
+                // Se TOP de destino estiver marcada como Zona Franca de Manaus e o parceiro n„o tiver SUFRAMA
                 // Impede o faturamento
                 if (ehZonaFrancaManaus && !parceiroTemSUFRAMA) {
-                    throw new MGEModelException("Somente √© poss√≠vel faturar para esta TOP com parceiros da Zona Franca de Manaus.");
+                    throw new MGEModelException("Somente È possÌvel faturar para esta TOP com parceiros da Zona Franca de Manaus.");
                 }
                 if (!ehZonaFrancaManaus && parceiroTemSUFRAMA) {
-                    throw new MGEModelException("Para parceiros da Zona Franca de Manaus s√≥ √© poss√≠vel faturar para TOPs deste tipo.");
+                    throw new MGEModelException("Para parceiros da Zona Franca de Manaus sÛ È possÌvel faturar para TOPs deste tipo.");
                 }
             }
         } finally {

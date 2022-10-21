@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
@@ -252,18 +253,15 @@ public class DebugTest {
         System.out.println("Não tem estoque disponível para este item neste local.\n Disponível: " + disponivel);
 
 
-        System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getNow(), TimeUtils.dataAdd(TimeUtils.getNow(),-1,5)));
+        System.out.println("Data add " + TimeUtils.dataAdd(TimeUtils.getNow(),-1,5));
 
         System.out.println(String.format("Existe um lote com validade menor: %s. Quebra FEFO precisa estar marcado.", TimeUtils.formataDDMMYYYY(null)));
 
         System.out.println("AGORA " +TimeUtils.getNow() + " TESTE DTFATUR SEGUNDOS: " + TimeUtils.dataAdd(TimeUtils.getNow(),1,13));
-
         String chave = "3_810_312_27_0_P_Estoque";
         String[] estoqueString = chave.split("_");
-
         System.out.println("Produto: " +estoqueString[1]);
         System.out.println("Controle: " +estoqueString[3]);
-
 
 
         System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getNow(), null));
@@ -271,15 +269,39 @@ public class DebugTest {
         final boolean faturamentoFuturo = TimeUtils.compareOnlyDates(TimeUtils.getNow(), TimeUtils.getMonthEnd(TimeUtils.getNow())) < 0;
 
 
-        BigDecimal decimais = BigDecimal.valueOf(10.8675768055400);
-        System.out.println(decimais.toString());
-        System.out.println(BigDecimalUtil.valueOf(decimais.toString()).doubleValue());
-
+        BigDecimal decimais = BigDecimal.valueOf(10.8645768055400);
         System.out.println(BigDecimalUtil.toCurrency(decimais));
+        System.out.println(BigDecimalUtil.getRounded(decimais,2));
+
+        System.out.println(BigDecimalUtil.valueOf(BigDecimalUtil.valueOf(TimeUtils.getYear(TimeUtils.getNow())).toString() + BigDecimalUtil.valueOf(BigDecimalUtil.valueOf("20221").toString().substring(4))));
 
 
+        // Máscara do ID SATIV AAAA_XXXX
+        SimpleDateFormat simpleformat = new SimpleDateFormat("yyyy_");
+        String sativ = simpleformat.format(new Date());
+        System.out.println("ID SATIV = " + sativ);
 
+        sativ = sativ + "0803";
 
+        //System.out.println(sativ.substring(6));
+
+        HashSet<Integer> lotes = new HashSet<>();
+
+        int sequencia  = Integer.parseInt(sativ.substring(5));
+
+        lotes.add(sequencia);
+        lotes.add(1);
+        lotes.add(6);
+
+        System.out.println(sequencia);
+
+        System.out.println("Última sequência: " + Collections.max(lotes));
+
+        System.out.println(String.format("%04d", Collections.max(lotes)+1));
+
+        System.out.println(TimeUtils.compareOnlyDates(TimeUtils.getNow(), TimeUtils.buildData(11,9, 2022))) ;
+        System.out.println();
+        System.out.println(TimeUtils.buildData(11,9, 2022));
 
 
 

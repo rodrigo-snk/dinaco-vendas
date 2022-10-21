@@ -37,7 +37,7 @@ public class Parceiro {
     }
 
 
-    public static String cadastraContato(DynamicVO parcVO, String nomeContato, String telefone, String email) throws Exception {
+    public static String cadastraContato(DynamicVO parcVO, String nomeContato, String telefone, String email, String area, String cargo) throws Exception {
         EntityFacade dwfFacade = EntityFacadeFactory.getDWFFacade();
         DynamicVO contatoVO = (DynamicVO) dwfFacade.getDefaultValueObjectInstance(DynamicEntityNames.CONTATO);
 
@@ -45,6 +45,8 @@ public class Parceiro {
         contatoVO.setProperty("NOMECONTATO", nomeContato);
         contatoVO.setProperty("TELEFONE", telefone);
         contatoVO.setProperty("EMAIL", email);
+        contatoVO.setProperty("AD_AREA", area);
+        contatoVO.setProperty("CARGO", cargo);
 
         contatoVO.setProperty("DTCAD", TimeUtils.getNow());
         contatoVO.setProperty("ATIVO", "S");

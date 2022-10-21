@@ -4,17 +4,23 @@
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/acoes/AlteraLote.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/acoes/AlteraValidadeLote.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/acoes/CarregaEstoque.java" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/acoes/EmailAnaliseAdmCom.java" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/AtualizaDtFaturamento.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/ExigeCodCliente.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/ImpedeAlteracaoCabecalho.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/ImpedeFaturamentoConsumidorFinalNaoContribuinte.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/ImpedeFaturamentoCotacao.java" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/ImpedeFaturamentoExportacao.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/ImpedeFaturamentoFinsdeExportacao.java" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/ImpedeFaturamentoZFM.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/NotificaFilaDeConferencia.java" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/NotificaUsuarioSATIV.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/RegraTransporte.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/Telemarketing.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/VerificaCRNaturezaParceiro.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/VerificaCamposProspect.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/VerificaEstoqueLote.java" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/VerificaFinanceiroSemTipoDeTitulo.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/modelo/CabecalhoNota.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/regras/RegraAereo.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/regras/RegraAvisosCab.java" charset="ISO-8859-1" />

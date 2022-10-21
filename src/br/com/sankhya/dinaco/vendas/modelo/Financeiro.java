@@ -5,6 +5,7 @@ import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.event.PersistenceEvent;
 import br.com.sankhya.jape.util.FinderWrapper;
 import br.com.sankhya.jape.vo.DynamicVO;
+import br.com.sankhya.jape.vo.EntityVO;
 import br.com.sankhya.jape.wrapper.JapeFactory;
 import br.com.sankhya.jape.wrapper.JapeWrapper;
 import br.com.sankhya.mgeprod.model.helper.ApontamentoHelper;
@@ -176,13 +177,24 @@ public class Financeiro {
 
             if (semSolicitacao) {
                // LiberacaoAlcadaHelper.validarLiberacoesPendentes(cabVO.asBigDecimalOrZero("NUNOTA"));
+                LiberacaoAlcadaHelper.inserirSolicitacao(ls);
                 LiberacaoAlcadaHelper.processarLiberacao(ls);
-                contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
+                //contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
+                contextoRegra.getBarramentoRegra().getLiberacoesSolicitadas().add(ls);
             } else {
                 if (liberacaoLimiteVO.getDHLIB() == null) {
                     contextoRegra.getBarramentoRegra().getLiberacoesSolicitadas();
                     contextoRegra.getBarramentoRegra().addLiberacaoSolicitada(ls);
                 }
             }
+    }
+
+    public static void removeMoeda(DynamicVO finVO) throws Exception {
+        finVO.setProperty("CODMOEDA", BigDecimal.ZERO);
+        finVO.setProperty("VLRMOEDA", BigDecimal.ZERO);
+
+        EntityFacadeFactory.getDWFFacade().saveEntity(DynamicEntityNames.FINANCEIRO, (EntityVO) finVO);
+
+
     }
 }

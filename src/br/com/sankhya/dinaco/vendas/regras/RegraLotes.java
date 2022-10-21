@@ -48,12 +48,9 @@ public class RegraLotes implements Regra {
     @Override
     public void beforeUpdate(ContextoRegra contextoRegra) throws Exception {
 
-        final boolean isItemNota = contextoRegra.getPrePersistEntityState().getDao().getEntityName().equals("ItemNota");
-
         JapeSession.SessionHandle hnd = null;
         try {
             hnd = JapeSession.open();
-
 
             if (isConfirmandoNota) {
                 DynamicVO cabVO = contextoRegra.getPrePersistEntityState().getNewVO();
@@ -65,8 +62,6 @@ public class RegraLotes implements Regra {
                 String observacaoFEFO = "";
 
                 for (ItemNotaVO itemVO: itensVO) {
-
-                    verificaLote(itemVO);
 
                     final String controle = getControle(itemVO.asString("CONTROLE"));
                     if (itemVO.containsProperty("AD_OBSFEFO")) {
@@ -86,35 +81,33 @@ public class RegraLotes implements Regra {
 
                         if (!controle.equals(" ")) {
                             //throw new MGEModelException(String.valueOf(Estoque.getValidade(codProd,codEmp, codLocal,controle)));
-                            validadeLote = Estoque.getValidadeLote(codProd,codEmp, codLocal,controle);
+                            validadeLote = Estoque.getValidadeLote(codProd, codEmp, codLocal, controle);
                             menorValidade = Estoque.getMenorValidade(codProd, codEmp, codLocal);
-
                             // Quando tiver um outro lote de validade menor, preenche observação da liberação
                             if (TimeUtils.compareOnlyDates(validadeLote, menorValidade) > 0) {
-                                observacao1001 = observacao1001.concat("Produto: " + itemVO.getCODPROD() + " / Lote: " +itemVO.getCONTROLE()+ " / Validade: " +TimeUtils.formataDDMMYYYY(validadeLote) + " Observação FEFO: " +observacaoFEFO+ ";");
+                                observacao1001 = observacao1001.concat("Produto: " + itemVO.getProperty("REFERENCIA") + " / Lote: " +itemVO.getCONTROLE()+ " / Validade: " +TimeUtils.formataDDMMYYYY(validadeLote) + " Observação FEFO: " +observacaoFEFO+ ";");
                             }
-
                             // Quando tiver um lote com validade inferior ao limtite estipulado no parceiro, preenche observação da liberação
                             if (validadeLote != null && TimeUtils.compareOnlyDates(validadeLote, dataLimiteQueParceiroAceitaVencimento) < 0) {
                                 //contextoRegra.getBarramentoRegra().addMensagem("Parceiro não aceita produtos com validade menor que " + DIASVENCITEM + " dias.");
-                                observacao1008 = observacao1008.concat("Produto: " + itemVO.getCODPROD() + " / Lote: " +itemVO.getCONTROLE()+ " / Validade: " +TimeUtils.formataDDMMYYYY(validadeLote)+ " Observação FEFO: " +observacaoFEFO + ";");
+                                observacao1008 = observacao1008.concat("Produto: " + itemVO.getProperty("REFERENCIA") + " / Lote: " +itemVO.getCONTROLE()+ " / Validade: " +TimeUtils.formataDDMMYYYY(validadeLote)+ " Observação FEFO: " +observacaoFEFO + ";");
                             }
                         }
                     }
+                }
 
-                    if (topVerificaFEFO) {
-                        // Quando tiver um outro lote de validade menor, exige liberação
-                        if (!observacao1001.equals("")) {
-                            liberacaoLimite(contextoRegra, codUsuarioLogado, cabVO, observacao1001, 1001);
-                        } else {
-                            LiberacaoAlcadaHelper.apagaSolicitacoEvento(1001, cabVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
-                        }
-                        // Quando tiver um lote com validade inferior ao limtite estipulado no parceiro exige liberação
-                        if (!observacao1008.equals("")) {
-                            liberacaoLimite(contextoRegra, codUsuarioLogado, cabVO, observacao1008, 1008);
-                        } else {
-                            LiberacaoAlcadaHelper.apagaSolicitacoEvento(1008, cabVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
-                        }
+                if (topVerificaFEFO) {
+                    // Quando tiver um outro lote de validade menor, exige liberação
+                    if (!observacao1001.equals("")) {
+                        liberacaoLimite(contextoRegra, codUsuarioLogado, cabVO, observacao1001, 1001);
+                    } else {
+                        LiberacaoAlcadaHelper.apagaSolicitacoEvento(1001, cabVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
+                    }
+                    // Quando tiver um lote com validade inferior ao limite estipulado no parceiro exige liberação
+                    if (!observacao1008.equals("")) {
+                        liberacaoLimite(contextoRegra, codUsuarioLogado, cabVO, observacao1008, 1008);
+                    } else {
+                        LiberacaoAlcadaHelper.apagaSolicitacoEvento(1008, cabVO.asBigDecimalOrZero("NUNOTA"), "TGFCAB", null);
                     }
                 }
             }
@@ -209,7 +202,7 @@ public class RegraLotes implements Regra {
         DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, itemVO.asBigDecimalOrZero("NUNOTA"));
         //DynamicVO parceiroVO = Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC"));
 
-        if (ComercialUtils.ehPedidoOuVenda(cabVO.asString("TIPMOV"))) {
+        if (ComercialUtils.ehPedidoOuVenda(cabVO.asString("TIPMOV")) && cabVO.asInt("CODTIPOPER") != 1145 && cabVO.asInt("CODTIPOPER") != 1151) {
             String controle = getControle(itemVO.asString("CONTROLE"));
             BigDecimal codEmp = itemVO.asBigDecimalOrZero("CODEMP");
             BigDecimal codProd = itemVO.asBigDecimalOrZero("CODPROD");

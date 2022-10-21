@@ -9,6 +9,8 @@ import br.com.sankhya.modelcore.metadata.DataDictionaryUtils;
 import br.com.sankhya.modelcore.util.ParameterUtils;
 import com.sankhya.util.StringUtils;
 
+import javax.xml.crypto.Data;
+
 public class VerificaCamposProspect implements EventoProgramavelJava {
     @Override
     public void beforeInsert(PersistenceEvent persistenceEvent) throws Exception {
@@ -25,7 +27,7 @@ public class VerificaCamposProspect implements EventoProgramavelJava {
             mensagem.append("Seguintes campos são obrigatórios quando parceiro não é prospect:\n");
 
             for (String campo: camposObrigatorios) {
-                if (DataDictionaryUtils.campoExisteEmTabela(campo, "TGFPAR") && parcVO.getProperty(campo) == null) mensagem.append(campo).append("\n");
+                if (DataDictionaryUtils.campoExisteEmTabela(campo, "TGFPAR") && parcVO.getProperty(campo) == null) mensagem.append(DataDictionaryUtils.getFieldMetadata("Parceiro", campo).getDescription()).append("\n");
             }
 
             if (mensagem.length() > 66) throw new MGEModelException(mensagem.toString());
@@ -49,7 +51,7 @@ public class VerificaCamposProspect implements EventoProgramavelJava {
             mensagem.append("Seguintes campos são obrigatórios quando prospect vira parceiro:\n");
 
             for (String campo: camposObrigatorios) {
-                if (DataDictionaryUtils.campoExisteEmTabela(campo, "TGFPAR") && parcVO.getProperty(campo) == null) mensagem.append(campo).append("\n");
+                if (DataDictionaryUtils.campoExisteEmTabela(campo, "TGFPAR") && parcVO.getProperty(campo) == null) mensagem.append(DataDictionaryUtils.getFieldMetadata("Parceiro", campo).getDescription()).append("\n");
             }
 
             if (mensagem.length() > 66) throw new MGEModelException(mensagem.toString());

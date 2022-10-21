@@ -11,7 +11,6 @@ import br.com.sankhya.modelcore.comercial.util.TipoOperacaoUtils;
 import br.com.sankhya.modelcore.util.*;
 import com.sankhya.util.BigDecimalUtil;
 import com.sankhya.util.StringUtils;
-import com.sankhya.util.TimeUtils;
 
 import java.math.BigDecimal;
 import java.util.Collection;

@@ -15,7 +15,7 @@ import static br.com.sankhya.dinaco.vendas.modelo.Financeiro.getFinanceirosByNun
 
 /**
  * Evento criado para o CabecalhoNota (TGFCAB)
- * Verifica se existe algum tÃ­tulo no Financeiro com tipo de tÃ­tulo 0 - SEM TIPO DE TÃTULO
+ * Verifica se existe algum título no Financeiro com tipo de título 0 - SEM TIPO DE TÍTULO
  */
 
 public class VerificaFinanceiroSemTipoDeTitulo implements EventoProgramavelJava {
@@ -38,7 +38,7 @@ public class VerificaFinanceiroSemTipoDeTitulo implements EventoProgramavelJava 
             final boolean tipoTituloZero = finsVO.stream().anyMatch(vo -> BigDecimalUtil.isNullOrZero(vo.asBigDecimalOrZero("CODTIPTIT")));
 
             if (ComercialUtils.ehCompra(cabVO.asString("TIPMOV")) && tipoTituloZero) {
-                throw new MGEModelException("Tipo de tÃ­tulo nÃ£o pode ser 0 - <SEM TIPO DE TITULO> para movimentaÃ§Ãµes geradas de compras. Verifique o Financeiro.");
+                throw new MGEModelException("Tipo de título não pode ser 0 - <SEM TIPO DE TITULO> para movimentações geradas de compras. Verifique o Financeiro.");
             }
         }
 

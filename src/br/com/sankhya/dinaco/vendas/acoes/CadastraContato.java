@@ -14,13 +14,15 @@ public class CadastraContato implements AcaoRotinaJava {
         String nomeContato = (String) contextoAcao.getParam("NOMECONTATO");
         String telefone = (String) contextoAcao.getParam("TELEFONE");
         String email = (String) contextoAcao.getParam("EMAIL");
+        String area = (String) contextoAcao.getParam("AREA");
+        String cargo = (String) contextoAcao.getParam("CARGO");
 
         Registro[] linhas = contextoAcao.getLinhas();
 
         if (linhas.length > 1) contextoAcao.mostraErro("Selecione apenas um registro.");
 
         for (Registro linha : linhas) {
-            contextoAcao.setMensagemRetorno(Parceiro.cadastraContato((DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.PARCEIRO, linha.getCampo("CODPARC")), nomeContato, telefone, email));
+            contextoAcao.setMensagemRetorno(Parceiro.cadastraContato((DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.PARCEIRO, linha.getCampo("CODPARC")), nomeContato, telefone, email, area, cargo));
         }
 
     }

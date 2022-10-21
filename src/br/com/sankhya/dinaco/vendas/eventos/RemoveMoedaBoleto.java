@@ -5,20 +5,32 @@ import br.com.sankhya.jape.event.PersistenceEvent;
 import br.com.sankhya.jape.event.TransactionContext;
 import br.com.sankhya.jape.vo.DynamicVO;
 
+import java.math.BigDecimal;
 
-public class Prototipo implements EventoProgramavelJava {
+public class RemoveMoedaBoleto implements EventoProgramavelJava {
     @Override
     public void beforeInsert(PersistenceEvent persistenceEvent) throws Exception {
+        DynamicVO finVO = (DynamicVO) persistenceEvent.getVo();
 
+        final boolean ehReceita = finVO.asInt("RECDESP") == 1;
+        final boolean origemEstoque = "E".equals(finVO.asString("ORIGEM"));
+
+        if (ehReceita && origemEstoque) {
+            finVO.setProperty("CODMOEDA", BigDecimal.ZERO);
+            finVO.setProperty("VLRMOEDA", BigDecimal.ZERO);
+        }
     }
 
     @Override
     public void beforeUpdate(PersistenceEvent persistenceEvent) throws Exception {
-        final boolean isModifingAceiteCliente = persistenceEvent.getModifingFields().isModifing("ACEITECLIENTE");
+        DynamicVO finVO = (DynamicVO) persistenceEvent.getVo();
 
-        if (isModifingAceiteCliente) {
-            DynamicVO protVO = (DynamicVO) persistenceEvent.getVo();
-            protVO.setProperty("STATUS", "F");
+        final boolean ehReceita = finVO.asInt("RECDESP") == 1;
+        final boolean origemEstoque = "E".equals(finVO.asString("ORIGEM"));
+
+        if (ehReceita && origemEstoque) {
+            finVO.setProperty("CODMOEDA", BigDecimal.ZERO);
+            finVO.setProperty("VLRMOEDA", BigDecimal.ZERO);
         }
 
     }

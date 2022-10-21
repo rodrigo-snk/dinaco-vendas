@@ -2,12 +2,10 @@ package br.com.sankhya.dinaco.vendas.eventos;
 
 import br.com.sankhya.extensions.eventoprogramavel.EventoProgramavelJava;
 import br.com.sankhya.jape.core.JapeSession;
-import br.com.sankhya.jape.dao.JdbcWrapper;
 import br.com.sankhya.jape.event.PersistenceEvent;
 import br.com.sankhya.jape.event.TransactionContext;
 import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.modelcore.MGEModelException;
-import br.com.sankhya.modelcore.comercial.ComercialUtils;
 import br.com.sankhya.modelcore.util.DynamicEntityNames;
 import br.com.sankhya.modelcore.util.EntityFacadeFactory;
 import com.sankhya.util.StringUtils;
@@ -15,7 +13,6 @@ import com.sankhya.util.StringUtils;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Set;
 
 public class ImpedeFaturamentoConsumidorFinalNaoContribuinte implements EventoProgramavelJava {
     @Override
@@ -36,7 +33,7 @@ public class ImpedeFaturamentoConsumidorFinalNaoContribuinte implements EventoPr
             DynamicVO cabOrigVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, nuNotaOrig);
             final boolean ehConsumidorFinalNaoContribuinte = "C".equals(StringUtils.getNullAsEmpty(cabOrigVO.asDymamicVO("Parceiro").asString("CLASSIFICMS")));
 
-            if (!ehCompraOuEntrada(cabVO.asString("TIPMOV"))) {
+            if (!ehCompraOuEntradaOuVenda(cabVO.asString("TIPMOV"))) {
 
                 DynamicVO rngVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.REGRA_NEGOCIO, BigDecimal.valueOf(7)); // 7 ? FATURAMENTO CONSUMIDOR FINAL
                 final boolean regraAtiva = "S".equals(rngVO.asString("ATIVO"));
@@ -47,8 +44,8 @@ public class ImpedeFaturamentoConsumidorFinalNaoContribuinte implements EventoPr
                 topsRngVO.forEach(vo -> tops.add(vo.asBigDecimal("CODTIPOPER")));
 
                 // Impede o faturamento
-                // Se TOP de destino estiver na regra de negócio 7 ? FATURAMENTO CONSUMIDOR FINAL NÃO CONTRIBUINTE e o Parceiro não for consumidor final não contribuinte
-                // Se o Parceiro for consumidor final e TOP de destino não estiver na regra de negócio 7 ? FATURAMENTO CONSUMIDOR FINAL NÃO CONTRIBUINTE
+                // Se TOP de destino estiver na regra de negócio 7 - FATURAMENTO CONSUMIDOR FINAL NÃO CONTRIBUINTE e o Parceiro não for consumidor final não contribuinte
+                // Se o Parceiro for consumidor final e TOP de destino não estiver na regra de negócio 7 - FATURAMENTO CONSUMIDOR FINAL NÃO CONTRIBUINTE
 
                 if (regraAtiva && !ehConsumidorFinalNaoContribuinte && tops.contains(codTipOper)) {
                     throw new MGEModelException("Somente é possível faturar para esta TOP parceiros com classificação ICMS - Consumidor Final Não Contribuinte.");
@@ -94,7 +91,7 @@ public class ImpedeFaturamentoConsumidorFinalNaoContribuinte implements EventoPr
 
     }
 
-    private boolean ehCompraOuEntrada(String tipMov) {
-        return "O-C-E-D-N-1".indexOf(tipMov) > -1;
+    private boolean ehCompraOuEntradaOuVenda(String tipMov) {
+        return "O-C-E-D-N-1-V".indexOf(tipMov) > -1;
     }
 }

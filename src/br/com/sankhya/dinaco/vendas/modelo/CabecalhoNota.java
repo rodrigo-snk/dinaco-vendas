@@ -362,6 +362,17 @@ public class CabecalhoNota {
         return cotVO.stream().findFirst().get().asBigDecimalOrZero("COTACAO");
     }
 
+    public static BigDecimal getCotacaoDia(BigDecimal codMoeda, Timestamp hoje) throws Exception {
+        if (BigDecimalUtil.isNullOrZero(codMoeda)) return BigDecimal.ZERO;
+        Collection<DynamicVO> cotVO = EntityFacadeFactory.getDWFFacade().findByDynamicFinderAsVO(new FinderWrapper(DynamicEntityNames.COTACAO_MOEDA, "this.CODMOEDA = ? and this.DTMOV = ?", new Object[] {codMoeda, TimeUtils.clearTime(hoje)}));
+
+        if (!cotVO.stream().findFirst().isPresent()) {
+            return getCotacaoDia(codMoeda, hoje);
+        }
+
+        return cotVO.stream().findFirst().get().asBigDecimalOrZero("COTACAO");
+    }
+
 
     private static BigDecimal getCotacaoMediaPeriodo(BigDecimal codMoeda, Timestamp dtInicio, Timestamp dtFim) throws Exception {
         if (BigDecimalUtil.isNullOrZero(codMoeda)) return null;
@@ -383,8 +394,7 @@ public class CabecalhoNota {
         return getCotacaoMediaPeriodo(codMoeda, primeiroDiaMesPassado, ultimoDiaMesPassado);
     }
 
-    public static void
-    verificaPTAX(DynamicVO cabVO, Boolean alterandoVlrMoeda, Boolean atualizandoCab) throws Exception {
+    public static void verificaPTAX(DynamicVO cabVO, Boolean alterandoVlrMoeda) throws Exception {
 
         if (!BigDecimalUtil.isNullOrZero(cabVO.asBigDecimal("CODMOEDA"))) {
             DynamicVO topVO  = TipoOperacaoUtils.getTopVO(cabVO.asBigDecimalOrZero("CODTIPOPER"));
@@ -394,19 +404,19 @@ public class CabecalhoNota {
             final boolean topPtaxDiaAnterior = topVO.containsProperty("AD_PTAXDIAANT") && "S".equals(StringUtils.getNullAsEmpty(topVO.asString("AD_PTAXDIAANT")));
             final boolean ptaxFixo = cabVO.containsProperty("AD_PTAXFIXO") && "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_PTAXFIXO")));
             final boolean ptaxMedio = cabVO.containsProperty("AD_PTAXMEDIO") && "S".equals(StringUtils.getNullAsEmpty(cabVO.asString("AD_PTAXMEDIO"))) && Parceiro.temPtaxMedio(cabVO.asBigDecimalOrZero("CODPARC"));
-            final boolean faturamentoFuturo = TimeUtils.compareOnlyDates(TimeUtils.getNow(), cabVO.asTimestamp("DTFATUR")) < 0;
+            final boolean faturamentoFuturo = TimeUtils.compareOnlyDates(TimeUtils.getNow(), cabVO.asTimestamp("DTFATUR")) < -3;
             Timestamp dataReferencia = faturamentoFuturo ? TimeUtils.getNow() : cabVO.asTimestamp("DTFATUR");
+            dataReferencia = dataReferencia == null ? TimeUtils.getNow() : dataReferencia;
             final boolean mesmaCotacao = cabVO.asBigDecimalOrZero("VLRMOEDA").compareTo(getCotacaoDiaAnterior(cabVO.asBigDecimal("CODMOEDA"), dataReferencia)) == 0;
 
+            //if (true) throw new MGEModelException(String.valueOf(dataReferencia));
 
             if (topPtaxDiaAnterior && alterandoVlrMoeda && !ptaxFixo && !mesmaCotacao) {
                 throw (BusinessException) SKError.registry(TSLevel.ERROR, "DINACO_REGRAS", new BusinessException(StringUtils.htmlScape("Não é permitido alterar Vlr. Moeda sem marcar PTAX Fixo.")));
             }
 
-            if (topPtaxDiaAnterior && !ptaxFixo) {
-                //if (atualizandoCab && !mesmaCotacao) throw (BusinessException) SKError.registry(TSLevel.ERROR, "DINACO_REGRAS", new BusinessException(StringUtils.htmlScape("Selecione a cotação do dia anterior.")));
+            if (topPtaxDiaAnterior && !ptaxFixo)
                 cabVO.setProperty("VLRMOEDA", getCotacaoDiaAnterior(cabVO.asBigDecimal("CODMOEDA"), dataReferencia));
-            }
 
             if (ptaxMedio) {
                 if (!moedaTemPtaxMedio) throw new MGEModelException("Moeda não tem PTAX médio. Verifique a rotina Valores de Moeda.");

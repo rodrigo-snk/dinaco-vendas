@@ -61,7 +61,6 @@ public class AlteraLote implements AcaoRotinaJava {
             if (temReserva) contextoAcao.mostraErro("Não é possível alterar nome do lote de produto reservado.");
             if (qtdMaiorQueEstoque) contextoAcao.mostraErro("Quantidade selecionada maior que a disponível.");
 
-
             if (contextoAcao.confirmarSimNao("Atenção", String.format("Confirma alteração de nome do lote %s para %s?", controle, novoControle), 1)) {
 
                 ProdutoVO prodVO = (ProdutoVO) dwfFacade.findEntityByPrimaryKeyAsVO(DynamicEntityNames.PRODUTO, codProd, ProdutoVO.class);
@@ -83,7 +82,6 @@ public class AlteraLote implements AcaoRotinaJava {
                 //contextoAcao.confirmar("Atenção", estVO.toString() ,1);
 
                 criaNotaDeSaida(dwfFacade, estVO, prodVO, qtd, cabSaidaVO);
-
                 criaNotaDeEntrada(dwfFacade, novoControle, estVO, prodVO, qtd, cabEntradaVO);
 
                 //DynamicVO cusVO = getCustoVO(codProd, codEmp, controle);
@@ -97,15 +95,12 @@ public class AlteraLote implements AcaoRotinaJava {
                     dwfFacade.createEntity(DynamicEntityNames.CUSTO, (EntityVO) custoVO);
                 }*/
 
-
                 criaLigacaoVar(dwfFacade, estVO, qtd, cabSaidaVO, cabEntradaVO);
-
 
                 contextoAcao.setMensagemRetorno(String.format("Alteração feita com sucesso! Nota de saída: %s | Nota de entrada: %s", cabSaidaVO.getNUNOTA(), cabEntradaVO.getNUNOTA()));
 
             }
         }
-
     }
 
     private BigDecimal criaNotaDeSaida(EntityFacade dwfFacade, DynamicVO estVO, ProdutoVO prodVO, BigDecimal qtd, CabecalhoNotaVO cabSaidaVO) throws Exception {

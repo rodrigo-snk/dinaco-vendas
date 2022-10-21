@@ -51,6 +51,9 @@ public class AlteraValidadeLote implements AcaoRotinaJava {
 
             DynamicVO estVO = (DynamicVO) dwfFacade.findEntityByPrimaryKeyAsVO(DynamicEntityNames.ESTOQUE, new Object[] {codEmp, codProd, codLocal, controle,codParc, tipo});
 
+            dtFabricacao = dtFabricacao == null ? estVO.asTimestamp("DTFABRICACAO") : dtFabricacao;
+            dtVal = dtVal == null ? estVO.asTimestamp("DTVAL") : dtVal;
+
             final boolean temReserva = estVO.asBigDecimal("RESERVADO").compareTo(BigDecimal.ZERO) > 0;
             final boolean naoEhEstoqueProprio = "T".equals(estVO.asString("TIPO")) || ("P".equals(estVO.asString("TIPO")) && !BigDecimalUtil.isNullOrZero(estVO.asBigDecimal("CODPARC")));
             final boolean loteRevalidado = "S".equals(StringUtils.getNullAsEmpty(estVO.asString("AD_REVALIDADO")));
@@ -60,7 +63,7 @@ public class AlteraValidadeLote implements AcaoRotinaJava {
             if (naoEhEstoqueProprio) contextoAcao.mostraErro("Não é possível alterar data de validade de produto em estoque de terceiros.");
             if (temReserva) contextoAcao.mostraErro("Não é possível alterar data de validade de produto reservado.");
 
-            if (contextoAcao.confirmarSimNao(String.format("Lote %s", controle), String.format("Confirma alteração data de validade de %s para %s?", TimeUtils.formataDDMMYYYY(estVO.asTimestamp("DTVAL")), TimeUtils.formataDDMMYYYY(dtVal)), 1)) {
+           if (contextoAcao.confirmarSimNao(String.format("Lote %s", controle), String.format("Confirma alteração data de validade de %s para %s?", TimeUtils.formataDDMMYYYY(estVO.asTimestamp("DTVAL")), TimeUtils.formataDDMMYYYY(dtVal)), 1)) {
 
                 ProdutoVO prodVO = (ProdutoVO) dwfFacade.findEntityByPrimaryKeyAsVO(DynamicEntityNames.PRODUTO, codProd, ProdutoVO.class);
                 DynamicVO empFinVO = (DynamicVO) dwfFacade.findEntityByPrimaryKeyAsVO(DynamicEntityNames.EMPRESA_FINANCEIRO, estVO.asBigDecimal("CODEMP"));
@@ -152,7 +155,7 @@ public class AlteraValidadeLote implements AcaoRotinaJava {
         itemVO.setCODLOCALORIG(estVO.asBigDecimal("CODLOCAL"));
         itemVO.setATUALESTOQUE(BigDecimal.ONE);
         itemVO.setRESERVA("N");
-        if (itemVO.containsProperty("AD_DTVAL"))  itemVO.setProperty("AD_DTVAL", dtVal);
+        if (itemVO.containsProperty("AD_DTVAL")) itemVO.setProperty("AD_DTVAL", dtVal);
         if (itemVO.containsProperty("AD_DTFABRICACAO")) itemVO.setProperty("AD_DTFABRICACAO",dtFabricacao);
         itens.add(itemVO);
         ItemNotaHelpper.saveItensNota(itens, cabEntradaVO);
@@ -170,7 +173,6 @@ public class AlteraValidadeLote implements AcaoRotinaJava {
         final ImpostosHelpper impostos = new ImpostosHelpper();
         impostos.calcularImpostos(cabEntradaVO.getNUNOTA());
         impostos.totalizarNota(cabEntradaVO.getNUNOTA());
-
 
         confirmaNota(cabEntradaVO.getNUNOTA());
 

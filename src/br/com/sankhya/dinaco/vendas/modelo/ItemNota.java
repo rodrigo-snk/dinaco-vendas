@@ -75,7 +75,7 @@ public class ItemNota {
 
                 for (DynamicVO itemVO: itens) {
                     BigDecimal vlrNovoEmReais = vlrMoeda.multiply(itemVO.asBigDecimalOrZero("VLRUNITMOE"));
-                    BigDecimal vlrAntigoEmReais = itemVO.asBigDecimalOrZero("VLRUNIT");
+                    //BigDecimal vlrAntigoEmReais = itemVO.asBigDecimalOrZero("VLRUNIT");
 
                     //if(true) throw new MGEModelException("Vlr. Antigo: " + vlrAntigoEmReais + "\nValor novo: " +vlrNovoEmReais + "\nValor moeda:" +vlrMoeda);
 
@@ -94,7 +94,7 @@ public class ItemNota {
 
     }
 
-    private static void atualizarItemNota(ServiceContext servico, DynamicVO cabVO, DynamicVO itemAtual, BigDecimal qtdNeg, BigDecimal vlrCotacaoMoeda, BigDecimal vlrUnit) throws Exception {
+    public static void atualizarItemNota(ServiceContext servico, DynamicVO cabVO, DynamicVO itemAtual, BigDecimal qtdNeg, BigDecimal vlrCotacaoMoeda, BigDecimal vlrUnit) throws Exception {
         itemAtual.setProperty("VLRUNIT", vlrUnit);
 
         CentralItemNota itemNota = new CentralItemNota();
@@ -106,7 +106,6 @@ public class ItemNota {
         CACHelper cacHelper = new CACHelper();
         cacHelper.incluirAlterarItem(cabVO.asBigDecimalOrZero("NUNOTA"), servico, null, false, itensFatura);
         //CACHelper.recalcularValoresMoeda(cabVO, itemAtual, "VLRUNIT", vlrCotacaoMoeda, CACHelper.DecimaisGerais.build(cabVO, itemAtual));
-
         //if(true) throw new MGEModelException("Vlr. Moeda:" + vlrCotacaoMoeda + "\nVlr Unit: " + itemAtual.asBigDecimalOrZero("VLRUNIT") + "\nVlr Total: " + itemAtual.asBigDecimalOrZero("VLRTOT") + "\nVlr Unit. Moeda: " + itemAtual.asBigDecimalOrZero("VLRUNITMOE"));
 
     }
