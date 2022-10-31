@@ -20,22 +20,16 @@ public class RemoveMoedaFinanceiro implements ScheduledAction {
     @Override
     public void onTime(ScheduledActionContext scheduledActionContext) {
 
-        EntityFacade dwfFacade = EntityFacadeFactory.getDWFFacade();
-
         try {
-            FinderWrapper finder = new FinderWrapper(DynamicEntityNames.FINANCEIRO, "this.DHMOV > SYSDATE - 2 and this.CODTIPTIT = 4 and this.CODMOEDA <> 0 and this.RECDESP = 1");
+            EntityFacade dwfFacade = EntityFacadeFactory.getDWFFacade();
+            FinderWrapper finder = new FinderWrapper(DynamicEntityNames.FINANCEIRO, "this.ORIGEM = 'E' and this.DHMOV > SYSDATE - 2 and this.CODMOEDA <> 0 and this.RECDESP = 1");
             finder.setMaxResults(-1);
             Collection<DynamicVO> financeiros = dwfFacade.findByDynamicFinderAsVO(finder);
 
-            financeiros.stream().forEach(vo -> {
-                try {
-                    vo.setProperty("CODMOEDA", BigDecimal.ZERO);
-                    vo.setProperty("VLRMOEDA", BigDecimal.ZERO);
-                    EntityFacadeFactory.getDWFFacade().saveEntity(DynamicEntityNames.FINANCEIRO, (EntityVO) vo);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
+            for (DynamicVO finVO: financeiros) {
+                removeMoeda(finVO);
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }

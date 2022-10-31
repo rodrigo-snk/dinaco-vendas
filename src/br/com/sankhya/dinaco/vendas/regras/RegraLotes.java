@@ -2,6 +2,7 @@ package br.com.sankhya.dinaco.vendas.regras;
 
 import br.com.sankhya.dinaco.vendas.modelo.Estoque;
 import br.com.sankhya.dinaco.vendas.modelo.Parceiro;
+import br.com.sankhya.dinaco.vendas.modelo.RegraNegocio;
 import br.com.sankhya.jape.core.JapeSession;
 import br.com.sankhya.jape.util.FinderWrapper;
 import br.com.sankhya.jape.vo.DynamicVO;
@@ -201,8 +202,9 @@ public class RegraLotes implements Regra {
     private void verificaValidade(DynamicVO itemVO) throws Exception {
         DynamicVO cabVO = (DynamicVO) EntityFacadeFactory.getDWFFacade().findEntityByPrimaryKeyAsVO(DynamicEntityNames.CABECALHO_NOTA, itemVO.asBigDecimalOrZero("NUNOTA"));
         //DynamicVO parceiroVO = Parceiro.getParceiroByPK(cabVO.asBigDecimalOrZero("CODPARC"));
+        final boolean ignoraValidade = RegraNegocio.verificaRegra(BigDecimal.valueOf(27), cabVO.asBigDecimalOrZero("CODTIPOPER"));
 
-        if (ComercialUtils.ehPedidoOuVenda(cabVO.asString("TIPMOV")) && cabVO.asInt("CODTIPOPER") != 1145 && cabVO.asInt("CODTIPOPER") != 1151) {
+        if (ComercialUtils.ehPedidoOuVenda(cabVO.asString("TIPMOV")) && !ignoraValidade) {
             String controle = getControle(itemVO.asString("CONTROLE"));
             BigDecimal codEmp = itemVO.asBigDecimalOrZero("CODEMP");
             BigDecimal codProd = itemVO.asBigDecimalOrZero("CODPROD");

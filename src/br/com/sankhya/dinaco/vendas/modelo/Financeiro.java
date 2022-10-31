@@ -190,11 +190,10 @@ public class Financeiro {
     }
 
     public static void removeMoeda(DynamicVO finVO) throws Exception {
+        EntityFacade dwfFacade = EntityFacadeFactory.getDWFFacade();
         finVO.setProperty("CODMOEDA", BigDecimal.ZERO);
         finVO.setProperty("VLRMOEDA", BigDecimal.ZERO);
-
-        EntityFacadeFactory.getDWFFacade().saveEntity(DynamicEntityNames.FINANCEIRO, (EntityVO) finVO);
-
+        dwfFacade.saveEntity(DynamicEntityNames.FINANCEIRO, (EntityVO) finVO);
 
     }
 }

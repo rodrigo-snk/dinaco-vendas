@@ -12,6 +12,7 @@
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/ImpedeFaturamentoCotacao.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/ImpedeFaturamentoExportacao.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/ImpedeFaturamentoFinsdeExportacao.java" charset="ISO-8859-1" />
+    <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/ImpedeFaturamentoOportunidadeCancelada.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/ImpedeFaturamentoZFM.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/NotificaFilaDeConferencia.java" charset="ISO-8859-1" />
     <file url="file://$PROJECT_DIR$/src/br/com/sankhya/dinaco/vendas/eventos/NotificaUsuarioSATIV.java" charset="ISO-8859-1" />

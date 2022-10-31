@@ -34,7 +34,7 @@ public class AtualizaCustoMoeda implements ScheduledAction {
             finder.setMaxResults(-1);
             Collection<DynamicVO> custos = dwfFacade.findByDynamicFinderAsVO(finder);
 
-            custos.stream().forEach(vo -> {
+            custos.forEach(vo -> {
                 try {
                     atualizaCustoMoeda(vo);
                 } catch (Exception e) {

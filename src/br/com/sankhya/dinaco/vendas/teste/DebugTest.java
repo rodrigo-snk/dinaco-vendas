@@ -303,6 +303,9 @@ public class DebugTest {
         System.out.println();
         System.out.println(TimeUtils.buildData(11,9, 2022));
 
+        System.out.println(TimeUtils.buildData(1,6,2022));
+
+
 
 
 
